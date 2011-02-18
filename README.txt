@@ -1,7 +1,7 @@
 Persistence
 ===========
 
-A library geared towards separating persistence concerns from data model classes. It includes:
+A ruby library geared towards separating persistence concerns from data model classes. It includes:
 
 - Generic repository-style persistence interfaces for a variety of data structures, from just a simple persistence Cell, to an ArrayCell, an ObjectCell, a HashRepository, to an IdentityHashRepository, which persists objects keyed by an identity property and matches the interface of many data stores.
 - In-memory example implementations of these interfaces

@@ -1,4 +1,6 @@
 require 'rubygems'
+require 'bundler/setup'
+
 require 'test/spec'
 require 'mocha'
 
@@ -17,6 +19,33 @@ module Test::Spec::TestCase::ClassMethods
       }
     else
       raise NameError, "Shared context #{shared_context} not found."
+    end
+  end
+end
+
+# We don't want Test::Unit::TestCase to run test methods from a superclass.
+# This is the way the more recent test-unit gems work, but requires a monkey-patch
+# to the stdlib's test/unit. (Unfortunately the more recent test-unit gems have
+# some compatibility issues with test-spec)
+module Test::Unit
+  class TestCase
+    def self.suite
+      # DIFF ON THE FOLLOWING LINE ONLY - true changed to false to exclude superclass methods
+      method_names = public_instance_methods(false)
+      tests = method_names.delete_if {|method_name| method_name !~ /^test./}
+      suite = TestSuite.new(name)
+      tests.sort.each do
+        |test|
+        catch(:invalid_test) do
+          suite << new(test)
+        end
+      end
+      if (suite.empty?)
+        catch(:invalid_test) do
+          suite << new("default_test")
+        end
+      end
+      return suite
     end
   end
 end
