@@ -62,6 +62,10 @@ module Persistence
       get
     end
     alias :get! :get_unless_empty
+
+    # Can override to indicate if you only support getting/setting a particular class or classes:
+    def can_get_class?(klass); true; end
+    def can_set_class?(klass); true; end
   end
 
   # Interface extending Cell which offers some array-specific persistence methods for use only
@@ -75,11 +79,6 @@ module Persistence
       value = get() and value[start, length]
     end
 
-    def get_slice_version(start, length, version)
-      return get_slice(start, length) if version.nil?
-      value = get_version(version) and value[start, length]
-    end
-
     def get_length
       value = get() and value.length
     end
@@ -89,6 +88,13 @@ module Persistence
     def get_lazy_array
       LazyArray.new(self)
     end
+
+    def can_get_class?(klass); klass == Array; end
+    def can_set_class?(klass); klass <= Array; end
+
+    # Can override to indicate if you only support getting/setting arrays with items of a particular class or classes:
+    def can_get_item_class?(klass); true; end
+    def can_set_item_class?(klass); true; end
 
     class LazyArray < LazyData::Array::Memoized
       def initialize(array_cell)
@@ -222,11 +228,6 @@ module Persistence
       keys.map {|key| get_with_key(key)}
     end
 
-    def get_version_with_key(key, version)
-      return get_with_key(key) if version.nil?
-      raise UnsupportedOperation
-    end
-
     def clear_key(key)
       raise UnsupportedOperation
     end
@@ -239,6 +240,10 @@ module Persistence
       KeyCell.new(self, key)
     end
 
+    # Can override to indicate if you only support getting/setting values of a particular class or classes:
+    def can_get_class?(klass); true; end
+    def can_set_class?(klass); true; end
+
     class KeyCell
       include Cell
 
@@ -248,10 +253,6 @@ module Persistence
 
       def get
         @hash_repository.get_with_key(@key)
-      end
-
-      def get_version(version)
-        @hash_repository.get_version_with_key(@key, version)
       end
 
       def set(value)
@@ -265,6 +266,9 @@ module Persistence
       def empty?
         @hash_repository.has_key?(@key)
       end
+
+      def can_get_class?(klass); @hash_repository.can_get_class?(klass); end
+      def can_set_class?(klass); @hash_repository.can_set_class?(klass); end
     end
   end
 
@@ -279,10 +283,6 @@ module Persistence
     # alias for get_with_key; you override get_with_key
     def get_by_id(id)
       get_with_key(id)
-    end
-
-    def get_version_by_id(id, version)
-      get_version_with_key(id, version)
     end
 
     # set_with_key implementation enforces the required constraint that key == value.id (where value.id is non-null)
@@ -328,23 +328,11 @@ module Persistence
       get_with_key(id)
     end
 
-    def reload_version(object, version)
-      id = object.id or raise MissingIdentity
-      get_version_with_key(id, version)
-    end
-
     # Like reload, but updates the given instance in-place with the updated data.
     # Returns nil where the object is no longer present in the repository
     def load(object)
       raise UnsupportedOperation unless object.respond_to?(:merge!)
       updated = reload(object) or return
-      object.merge!(updated)
-      object
-    end
-
-    def load_version(object, version)
-      raise UnsupportedOperation unless object.respond_to?(:merge!)
-      updated = reload_version(object, version) or return
       object.merge!(updated)
       object
     end
@@ -382,22 +370,10 @@ module Persistence
       get_many_with_keys(ids)
     end
 
-    def get_many_version_by_ids(ids, version)
-      return get_many_by_ids(ids) if version.nil?
-      ids.map {|id| get_version_with_key(id, version)}
-    end
-
     # Uses get_many_by_ids
     def reload_many(entities)
       ids = entities.map {|entity| entity.id or raise MissingIdentity}
       get_many_by_ids(ids)
-    end
-
-    # Uses get_many_version_by_ids
-    def reload_many_version(entities, version)
-      return reload_many(entities) if version.nil?
-      ids = entities.map {|entity| entity.id or raise MissingIdentity}
-      get_many_version_by_ids(ids, version)
     end
 
 

@@ -1,0 +1,100 @@
+require 'persistence/sequel'
+require_later 'persistence/sequel/dataset_lazy_array'
+require_later 'persistence/sequel/identity_hash_repository'
+
+module Persistence::Sequel
+  # A query has a dataset and mappings constructed to select a particular
+  # set of properties on a particular Sequel::IdentityHashRepository
+  class Query
+    attr_reader :dataset, :count_dataset, :property_versions, :property_columns, :aliased_columns, :tables
+
+    # Repo: repository to query
+    # properties: mapping or array of properties to fetch.
+    # properties ::=
+    #   nil or true = fetch the default set of properties for the given repository
+    #   array of property names = fetch just these properties, each in their default version
+    #   hash of property names = fetch just these properties, each in the version given in the hash
+    #
+    # can pass a block: {|dataset, property_columns| return dataset.messed_with}
+    def initialize(repo, properties)
+      @repository = repo
+
+      if properties.is_a?(::Array)
+        @property_versions = {}
+        properties.each {|p,v| @property_versions[p] = v}
+      else
+        @property_versions = properties
+      end
+
+      @property_columns, @aliased_columns, @tables =
+        @repository.columns_aliases_and_tables_for_properties(@property_versions.keys, no_select)
+
+      @dataset = @repository.dataset_to_select_tables(*@tables).select(*@aliased_columns)
+      @dataset = yield @dataset, @property_columns if block_given?
+
+      # count_dataset is like the normal dataset except no columns need to be selected.
+      # however we do still map any no_select's requested, since the tables for those might
+      # be needed for stuff in the where clause etc
+      @count_property_columns, _, @count_tables =
+        @repository.columns_aliases_and_tables_for_properties(no_select, no_select)
+
+      @count_dataset = @repository.dataset_to_select_tables(*@count_tables)
+      @count_dataset = yield @count_dataset, @count_property_columns if block_given?
+    end
+
+    private
+
+    def load_from_rows(rows, return_the_row_alongside_each_result=false)
+      return [] if rows.empty?
+
+      property_hashes = []; ids = []
+      @repository.identity_mapper.load_values(rows) do |id,i|
+        property_hashes << {@repository.identity_property => id}
+        ids << id
+      end
+
+      @property_versions.each do |prop_name, prop_version|
+        @repository.mapper(prop_name).load_values(rows, ids, prop_version) do |value, i|
+          property_hashes[i][prop_name] = value
+        end
+      end
+
+      result = []
+      property_hashes.each_with_index do |h,i|
+        row = rows[i]
+        entity = @repository.construct_entity(h, row)
+        result << (return_the_row_alongside_each_result ? [entity, row] : entity)
+      end
+      result
+    end
+
+
+    public
+
+    def results(lazy=false)
+      lazy_array = DatasetLazyArray.new(@dataset, @count_dataset) {|rows| load_from_rows(rows)}
+      lazy ? lazy_array : lazy_array.to_a
+    end
+
+    alias :to_a :results
+
+    # this one is useful if you add extra selected columns onto the dataset, and you want to get
+    # at those extra values on the underlying rows alongside the loaded entities.
+    def results_with_rows
+      load_from_rows(@dataset.all, true)
+    end
+
+    def single_result
+      row = IdentityHashRepository.translate_exceptions {@dataset.first} or return
+
+      id = @repository.identity_mapper.load_value(row)
+      property_hash = {@repository.identity_property => id}
+
+      @property_versions.each do |prop_name, prop_version|
+        property_hash[prop_name] = @repository.mapper(prop_name).load_value(row, id, prop_version)
+      end
+
+      @repository.construct_entity(property_hash, row)
+    end
+  end
+end

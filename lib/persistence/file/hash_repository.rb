@@ -17,6 +17,9 @@ module Persistence
   class File::HashRepository
     include Persistence::HashRepository
 
+    def can_get_class?(klass); klass == String; end
+    def can_set_class?(klass); klass == String; end
+
     def initialize(base_path)
       @base_path = base_path
     end

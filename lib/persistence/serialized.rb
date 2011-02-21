@@ -34,7 +34,6 @@ module Persistence
       json = @cache.get_with_key(cache_key(key)) and @serializer.deserialize(json)
     end
 
-    # uses values_at from the MSP::Cache interface, which may be an optimised multi-get operation
     def get_many_with_keys(keys)
       jsons = @cache.get_many_with_keys(*keys.map {|key| cache_key(key)})
       jsons.map {|json| json && @serializer.deserialize(json)}
