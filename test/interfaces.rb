@@ -358,6 +358,7 @@ describe_shared "Persistence::SetRepository" do
   end
 end
 
+AbcDef = LazyData::StructWithIdentity(:abc, :def)
 
 describe_shared "Persistence::IdentitySetRepository" do
   behaves_like "Persistence::SetRepository"
@@ -373,8 +374,6 @@ describe_shared "Persistence::IdentitySetRepository" do
   def make_id_set_repo
     # Some::Repo.new
   end
-
-  AbcDef = LazyData::StructWithIdentity(:abc, :def)
 
   # should make an object for testing purposes which has :abc and :def properties
   # which the tests can use.

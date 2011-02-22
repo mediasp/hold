@@ -48,6 +48,25 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     assert_equal ['x','x'], [xxyy[1].abc, xxyy[1].def]
   end
 
+  it "should allow you to specify which properties to load eagerly, with the model returned able to lazily fetch the rest on demand (when LazyData::Struct subclass used for the model)" do
+    entity = make_entity(:abc => 'abc', :def => 'def')
+    @repository.store_new(entity)
+    id = entity.id
+
+    entity = @repository.get_by_id(id, [:id])
+    assert entity.attribute_loaded?(:id)
+    assert !entity.attribute_loaded?(:abc)
+    assert !entity.attribute_loaded?(:def)
+    assert_equal 'abc', entity.abc
+    assert entity.attribute_loaded?(:abc)
+    assert_equal 'def', entity[:def]
+    assert entity.attribute_loaded?(:def)
+
+    entity = @repository.get_by_id(id, [:abc])
+    assert entity.attribute_loaded?(:abc)
+    assert !entity.attribute_loaded?(:def)
+  end
+
   describe "map_column", self do
     it "should map a schema property to a database column of the same name" do
       @db = Sequel.sqlite
