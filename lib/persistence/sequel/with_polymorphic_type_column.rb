@@ -1,7 +1,5 @@
-require 'persistence/sequel'
-
 module Persistence::Sequel
-  # Mixin for Sequel::IdentityHashRepository which adds support for a polymorphic type column which
+  # Mixin for Sequel::IdentitySetRepository which adds support for a polymorphic type column which
   # is used to persist the class of the model.
   module WithPolymorphicTypeColumn
 
@@ -25,7 +23,7 @@ module Persistence::Sequel
     # so we know which class to instantiate for each row.
     #
     # If we're restricted to only one class, we don't need to select the type column
-    def columns_aliases_and_tables_for_properties(properties, no_alias_needed=[])
+    def columns_aliases_and_tables_for_properties(properties)
       columns_by_property, aliased_columns, tables = super
       unless @restricted_to_types && @restricted_to_types.length == 1
         aliased_columns << @aliased_type_column

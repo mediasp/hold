@@ -1,6 +1,3 @@
-require 'persistence/sequel'
-require 'set'
-
 module Persistence::Sequel
   # Abstract superclass.
   # Responsibility of a PropertyMapper is to map data for a particular property of a model class, between the

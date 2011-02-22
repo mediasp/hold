@@ -1,6 +1,3 @@
-require 'persistence/sequel'
-require_later 'persistence/sequel/identity_hash_repository'
-
 module Persistence::Sequel
   # For returning LazyData::Array instances based off a Sequel dataset:
   class DatasetLazyArray < LazyData::Array::MemoizedLength
@@ -11,16 +8,16 @@ module Persistence::Sequel
     end
 
     def _each(&block)
-      rows = IdentityHashRepository.translate_exceptions {@dataset.all}
+      rows = Persistence::Sequel.translate_exceptions {@dataset.all}
       (@block ? @block.call(rows) : rows).each(&block)
     end
 
     def _length
-      IdentityHashRepository.translate_exceptions {@count_dataset.count}
+      Persistence::Sequel.translate_exceptions {@count_dataset.count}
     end
 
     def slice_from_start_and_length(offset, limit)
-      rows = IdentityHashRepository.translate_exceptions do
+      rows = Persistence::Sequel.translate_exceptions do
         @dataset.limit(limit, offset).all
       end
       # we're supposed to return nil if offset > length of the array,

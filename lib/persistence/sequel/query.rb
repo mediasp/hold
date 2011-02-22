@@ -1,10 +1,6 @@
-require 'persistence/sequel'
-require_later 'persistence/sequel/dataset_lazy_array'
-require_later 'persistence/sequel/identity_hash_repository'
-
 module Persistence::Sequel
   # A query has a dataset and mappings constructed to select a particular
-  # set of properties on a particular Sequel::IdentityHashRepository
+  # set of properties on a particular Sequel::IdentitySetRepository
   class Query
     attr_reader :dataset, :count_dataset, :property_versions, :property_columns, :aliased_columns, :tables
 
@@ -27,19 +23,13 @@ module Persistence::Sequel
       end
 
       @property_columns, @aliased_columns, @tables =
-        @repository.columns_aliases_and_tables_for_properties(@property_versions.keys, no_select)
+        @repository.columns_aliases_and_tables_for_properties(@property_versions.keys)
 
-      @dataset = @repository.dataset_to_select_tables(*@tables).select(*@aliased_columns)
+      @dataset = @repository.dataset_to_select_tables(*@tables)
       @dataset = yield @dataset, @property_columns if block_given?
 
-      # count_dataset is like the normal dataset except no columns need to be selected.
-      # however we do still map any no_select's requested, since the tables for those might
-      # be needed for stuff in the where clause etc
-      @count_property_columns, _, @count_tables =
-        @repository.columns_aliases_and_tables_for_properties(no_select, no_select)
-
-      @count_dataset = @repository.dataset_to_select_tables(*@count_tables)
-      @count_dataset = yield @count_dataset, @count_property_columns if block_given?
+      @count_dataset = @dataset
+      @dataset = @dataset.select_more(*@aliased_columns)
     end
 
     private
@@ -85,7 +75,7 @@ module Persistence::Sequel
     end
 
     def single_result
-      row = IdentityHashRepository.translate_exceptions {@dataset.first} or return
+      row = Persistence::Sequel.translate_exceptions {@dataset.first} or return
 
       id = @repository.identity_mapper.load_value(row)
       property_hash = {@repository.identity_property => id}

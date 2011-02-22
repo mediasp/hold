@@ -37,10 +37,18 @@ describe "Persistence::InMemory::HashRepository" do
   end
 end
 
-describe "Persistence::InMemory::IdentityHashRepository" do
-  behaves_like "Persistence::IdentityHashRepository"
+describe "Persistence::InMemory::SetRepository" do
+  behaves_like "Persistence::SetRepository"
 
-  def make_id_hash_repo
-    Persistence::InMemory::IdentityHashRepository.new
+  def make_set_repo
+    Persistence::InMemory::SetRepository.new
+  end
+end
+
+describe "Persistence::InMemory::IdentitySetRepository" do
+  behaves_like "Persistence::IdentitySetRepository"
+
+  def make_id_set_repo
+    Persistence::InMemory::IdentitySetRepository.new
   end
 end

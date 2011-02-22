@@ -48,7 +48,52 @@ module Persistence
     end
   end
 
-  class Serialized::IdentityHashRepository < Serialized::HashRepository
-    include Persistence::IdentityHashRepository
+  class Serialized::IdentitySetRepository
+    include Persistence::IdentitySetRepository
+
+    attr_reader :cache, :serializer, :key_prefix
+
+    def initialize(cache, serializer, key_prefix=nil)
+      @cache = cache
+      @serializer = serializer
+      @key_prefix = key_prefix
+    end
+
+    def cache_key(key)
+      @key_prefix ? @key_prefix + key.to_s : key.to_s
+    end
+
+    def allocates_ids?
+      false
+    end
+
+    def store(object)
+      id = object.id or raise MissingIdentity
+      @cache.set_with_key(cache_key(id), @serializer.serialize(object))
+      object
+    end
+
+    def delete(object)
+      id = object.id or raise MissingIdentity
+      delete_id(id)
+    end
+
+    def contains?(object)
+      id = object.id or raise MissingIdentity
+      contains_id?(id)
+    end
+
+    def get_by_id(id)
+      json = @cache.get_with_key(cache_key(id)) and @serializer.deserialize(json)
+    end
+
+    def delete_id(id)
+      @cache.clear_key(cache_key(id))
+    end
+
+    def contains_id?(id)
+      @cache.has_key?(cache_key(id))
+    end
+
   end
 end

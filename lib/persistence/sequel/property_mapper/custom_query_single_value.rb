@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # A read-only mapper for properties which are a single instance of a model class loaded from another repo.
   #

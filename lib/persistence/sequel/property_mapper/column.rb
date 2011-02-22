@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # Simplest case: maps the property directly to a column on the corresponding table.
   class PropertyMapper::Column < PropertyMapper

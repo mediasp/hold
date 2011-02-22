@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper/column'
-
 module Persistence::Sequel
   class PropertyMapper::Identity < PropertyMapper
     def columns_aliases_and_tables_for_select(preferred_table=@repository.main_table)

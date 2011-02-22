@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # Maps to an array of associated objects stored in another repo, which has a foreign_key-mapped
   # property pointing at instances of our model class.
@@ -45,12 +43,12 @@ module Persistence::Sequel
 
     def foreign_key_mapper
       @foreign_key_mapper ||= begin
-        mapper = target_repo.property_mappers[@foreign_key_property_name]
+        mapper = target_repo.mapper(@foreign_key_property_name)
         unless mapper.is_a?(PropertyMapper::ForeignKey)
           raise "OneToManyMapper: Expected ForeignKey mapper with name #{@foreign_key_property_name}"
         end
-        unless mapper.target_repo.can_get_class?(model_class)
-          raise "OneToManyMapper: ForeignKey mapper's target repo model_class was not same as (or superclass of) our repo's model_class"
+        unless mapper.target_repo.can_get_class?(@repository.model_class)
+          raise "OneToManyMapper: ForeignKey mapper's target repo can't get our repository's model_class"
         end
         mapper
       end
@@ -63,7 +61,7 @@ module Persistence::Sequel
         dataset = dataset.filter(filter)
         dataset = dataset.order(mapping[@order_property]) if @order_property
         dataset
-      end.to_a(lazy)
+      end.to_a
     end
 
     def load_values(rows, ids=nil, version=nil, &b)

@@ -1,10 +1,6 @@
-require 'persistence/sequel'
-require 'persistence/interfaces'
-require_later 'persistence/sequel/identity_hash_repository'
-
 module Persistence::Sequel
   class PolymorphicRepository
-    include Persistence::IdentityHashRepository
+    include Persistence::IdentitySetRepository
 
     attr_reader :db, :table, :type_column, :id_column, :type_to_model_class_mapping,
                 :repos_for_model_classes, :model_class_to_type_mapping
@@ -81,7 +77,7 @@ module Persistence::Sequel
       row = dataset.limit(1).first and load_from_row(row, version)
     end
 
-    def get_with_key(id, version=nil)
+    def get_by_id(id, version=nil)
       get_with_dataset(version) {|ds| ds.filter(@id_column => id)}
     end
 
@@ -90,17 +86,12 @@ module Persistence::Sequel
       load_from_rows(rows, version, ids)
     end
 
-    def has_key?(id)
+    def contains_id?(id)
       @dataset.filter(@id_column => id).select(1).limit(1).single_value ? true : false
     end
 
 
 
-
-    def set_with_key(id, object)
-      repo = @repos_for_model_classes[object.class] or raise Error
-      repo.set_with_key(id, object)
-    end
 
     def store(object)
       repo = @repos_for_model_classes[object.class] or raise Error
@@ -120,10 +111,6 @@ module Persistence::Sequel
     def update_by_id(id, update_entity)
       repo = @repos_for_model_classes[update_entity.class] or raise Error
       repo.update_by_id(id, update_entity)
-    end
-
-    def clear_key(id)
-      delete(get_with_key(id))
     end
 
     def delete(object)

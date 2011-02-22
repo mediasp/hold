@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # Maps to an array of associated objects stored in another repo, where a :join_table exists with columns for:
   #   - our id property (:left_key)

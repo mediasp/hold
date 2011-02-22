@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # A read-only mapper for array properties, which allows you to fetch the items via an arbitrary custom query
   # against a target repository. You supply a block which takes the dataset and mapper arguments supplied by

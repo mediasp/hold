@@ -272,60 +272,77 @@ module Persistence
     end
   end
 
-  # A special kind of HashRepository which stores Objects with an identity property, indexed by their id.
-  # Exposes a somewhat more familiar CRUD-style persistence interface as a result.
-  #
-  # Comes with default implementations for most of the extra interface; you need to override #get_with_key, #store,
-  # #clear_key and #has_key?
-  module IdentityHashRepository
-    include HashRepository
-
-    # alias for get_with_key; you override get_with_key
-    def get_by_id(id)
-      get_with_key(id)
-    end
-
-    # set_with_key implementation enforces the required constraint that key == value.id (where value.id is non-null)
-    # you're expected to override #store to do that actual work.
-    def set_with_key(key, value)
-      raise IdentityConflict if value.id && key != value.id
-      super
-    end
-
-    # You override this.
-    #
-    # You may be passed an object without an ID, and you may issue an identity to it prior to / during storage where
-    # supported (eg an autoincrement primary key), or raise MissingIdentity where this isn't supported.
+  module SetRepository
+    # Store the object in the persisted set. If the object is already in the set,
+    # it may stay there untouched (in the case where the object's identity is based
+    # on its entire contents), or get replaced by the newer version (where the object's
+    # identity is only based on, say, some identity property), but will never be
+    # duplicated (since this is a set)
     def store(object)
-      raise MissingIdentity unless object.id
-      set_with_key(object.id, object)
+      raise UnsupportedOperation
     end
 
-    # like store, but only works where no object already exists in the repository under this id (or where the
-    # object lacks an id, although note that not all #store implementations support this)
+    # like store, but should raise IdentityConflict if the object (or one equal to it)
+    # already exists in the set
     def store_new(object)
-      id = object.id
-      raise IdentityConflict if id && has_key?(id)
+      raise IdentityConflict if contains?(object)
       store(object)
     end
 
-    # You override clear_key; this just wraps it with a pass-the-actual-object style interface,
-    # making sure the object has an ID beforehand
+    # Removes the object with this identity from the persisted set
     def delete(object)
-      id = object.id or raise MissingIdentity
-      clear_key(id)
+      raise UnsupportedOperation
     end
 
-    # Alias wrapper for clear_key; you override clear_key
+    # Is this object in the persisted set?
+    def contains?(object)
+      raise UnsupportedOperation
+    end
+
+    # Returns an array of all persisted items in the set
+    def get_all
+      raise UnsupportedOperation
+    end
+  end
+
+  # A special kind of SetRepository which stores Objects whose identities are determined by
+  # an identity property, and supports indexed lookup by their id.
+  #
+  # May allocate the IDs itself, or not.
+  #
+  # Exposes a somewhat more familiar CRUD-style persistence interface as a result.
+  #
+  # Comes with default implementations for most of the extra interface
+  module IdentitySetRepository
+    include SetRepository
+
+    # Either the repository allocates IDs, and you don't (in which case any entity with an ID may be assumed
+    # to be already persisted in the repo), or the repository doesn't allocate IDs (in which case you must
+    # always supply one when persisting a new object).
+    #
+    # If you allocates_ids?, you should deal with an object without an identity as an argument to store
+    # and store_new, and you should set the id property on it before returning it.
+    #
+    # If you don't, you may raise MissingIdentity if passed an object without one.
+    def allocates_ids?
+      false
+    end
+
+    # Looks up a persisted object by the value of its identity property
+    def get_by_id(id)
+      raise UnsupportedOperation
+    end
+
+    # deletes the object with the given identity where it exists in the repo
     def delete_id(id)
-      clear_key(id)
+      delete(get_by_id(id))
     end
 
     # Loads a fresh instance of the given object by its id
     # Returns nil where the object is no longer present in the repository
     def reload(object)
       id = object.id or raise MissingIdentity
-      get_with_key(id)
+      get_by_id(id)
     end
 
     # Like reload, but updates the given instance in-place with the updated data.
@@ -341,10 +358,8 @@ module Persistence
     def update(entity, update_entity)
       raise UnsupportedOperation unless entity.respond_to?(:merge!)
       load(entity) or return
-      id = entity.id
       entity.merge!(update_entity)
-      set_with_key(id, entity)
-      entity
+      store(entity)
     end
 
     # Applies an in-place update to the object with the given identity, where it exists in the repository
@@ -352,59 +367,50 @@ module Persistence
       entity = get_by_id(id) or return
       raise UnsupportedOperation unless entity.respond_to?(:merge!)
       entity.merge!(update_entity)
-      set_with_key(id, entity)
-      entity
-    end
-
-    def contains?(object)
-      id = object.id or raise MissingIdentity
-      has_key?(id)
+      store(entity)
     end
 
     def contains_id?(id)
-      has_key?(id)
+      !!get_by_id(id)
     end
 
 
     def get_many_by_ids(ids)
-      get_many_with_keys(ids)
-    end
-
-    # Uses get_many_by_ids
-    def reload_many(entities)
-      ids = entities.map {|entity| entity.id or raise MissingIdentity}
-      get_many_by_ids(ids)
-    end
-
-
-    # Basic query API based on properties.
-    # May not be supported on all properties or by all repos.
-    def get_many_by_property(property, value)
-      raise UnsupportedOperation
-    end
-
-    def get_by_property(property, value)
-      raise UnsupportedOperation
-    end
-
-
-
-
-    def key_cell(key)
-      KeyCell.new(self, key)
+      ids.map {|id| get_by_id(id)}
     end
 
     def id_cell(id)
-      key_cell(id)
+      IdCell.new(self, id)
     end
 
     def cell(object)
       id = object.id or raise MissingIdentity
-      key_cell(id)
+      id_cell(id)
     end
 
-    class KeyCell < HashRepository::KeyCell
+    class IdCell
       include ObjectCell
+
+      def initialize(id_set_repo, id)
+        @id_set_repo = id_set_repo
+        @id = id
+      end
+
+      def get
+        @id_set_repo.get_by_id(@id)
+      end
+
+      def set(value)
+        @id_set_repo.update_by_id(@id, value)
+      end
+
+      def empty?
+        !@id_set_repo.contains?(@id)
+      end
+
+      def clear
+        @id_set_repo.delete_id(@id)
+      end
     end
   end
 end

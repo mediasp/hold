@@ -1,26 +1,9 @@
-require 'persistence/sequel'
-require 'persistence/interfaces'
-require 'lazy_data/array'
-require_later 'persistence/sequel/query'
-require_later 'persistence/sequel/property_mapper'
-require_later 'persistence/sequel/property_mapper/column'
-require_later 'persistence/sequel/property_mapper/identity'
-require_later 'persistence/sequel/property_mapper/updated_at'
-require_later 'persistence/sequel/property_mapper/created_at'
-require_later 'persistence/sequel/property_mapper/foreign_key'
-require_later 'persistence/sequel/property_mapper/one_to_many'
-require_later 'persistence/sequel/property_mapper/many_to_many'
-require_later 'persistence/sequel/property_mapper/hash'
-require_later 'persistence/sequel/property_mapper/array'
-require_later 'persistence/sequel/property_mapper/custom_query'
-require_later 'persistence/sequel/property_mapper/custom_query_single_value'
-require_later 'persistence/sequel/query_array_cell'
-
 module Persistence::Sequel
-  class IdentityHashRepository
-    include Persistence::IdentityHashRepository
+  class IdentitySetRepository
+    include Persistence::IdentitySetRepository
 
-    attr_reader :db, :model_class, :main_table, :property_mappers, :identity_property, :identity_mapper, :id_sequence_table
+    attr_reader :db, :model_class, :main_table, :property_mappers, :identity_property,
+                :identity_mapper, :id_sequence_table, :default_properties
 
     def initialize(db, model_class, main_table, &mapper_config)
       @db = db
@@ -42,7 +25,16 @@ module Persistence::Sequel
       @identity_property = :id # todo make this configurable
       @identity_mapper = @property_mappers[@identity_property] = PropertyMapper::Identity.new(self, @identity_property)
 
+      @default_properties = {}
+      @property_mappers.each do |name, mapper|
+        @default_properties[name] = true if mapper.is_a?(PropertyMapper::Column)
+      end
+
       @property_mappers.freeze
+    end
+
+    def allocates_ids?
+      !!@id_sequence_table
     end
 
     # is this repository capable of loading instances of the given model class?
@@ -105,19 +97,8 @@ module Persistence::Sequel
 
     # Some helpers
 
-    def self.translate_exceptions
-      begin
-        yield
-      rescue ::Sequel::DatabaseError => e
-        case e.message
-        when /duplicate|unique/i then raise Persistence::IdentityConflict.new(e)
-        else raise Persistence::Error.new("#{e.class}: #{e.message}")
-        end
-      end
-    end
-
     def translate_exceptions(&b)
-      self.class.translate_exceptions(&b)
+      Persistence::Sequel.translate_exceptions(&b)
     end
 
     def insert_row_for_entity(entity, table, id=nil)
@@ -139,7 +120,9 @@ module Persistence::Sequel
     public
 
     def construct_entity(property_hash, row=nil)
-      @model_class.new(property_hash)
+      @model_class.new(property_hash) do |model, property|
+        get_property(model, property)
+      end
     end
 
     def dataset_to_select_tables(*tables)
@@ -150,13 +133,13 @@ module Persistence::Sequel
       end
     end
 
-    def columns_aliases_and_tables_for_properties(properties, no_alias_needed=[])
+    def columns_aliases_and_tables_for_properties(properties)
       columns_by_property = {}; aliased_columns = []; tables = []
       properties.each do |p|
         next if p == @identity_property # this gets special handling
         cs, as, ts = mapper(p).columns_aliases_and_tables_for_select
         columns_by_property[p] = cs
-        aliased_columns.concat(as) unless no_alias_needed.include?(p)
+        aliased_columns.concat(as)
         tables.concat(ts)
       end
       tables.unshift(@main_table) if tables.delete(@main_table)
@@ -167,7 +150,7 @@ module Persistence::Sequel
       # add an extra table just in order to select the ID)
       id_cols, id_aliases, id_tables = @identity_mapper.columns_aliases_and_tables_for_select(tables.first || @main_table)
       columns_by_property[@identity_property] = id_cols
-      aliased_columns.concat(id_aliases) unless no_alias_needed.include?(@identity_property)
+      aliased_columns.concat(id_aliases)
       tables.concat(id_tables)
       aliased_columns.uniq!; tables.uniq!
       return columns_by_property, aliased_columns, tables
@@ -180,7 +163,8 @@ module Persistence::Sequel
     # This is the main mechanism to retrieve stuff from the repo via custom queries.
 
     def query(properties=nil, &b)
-      Query.new(self, properties || @default_properties, &b)
+      properties = @default_properties if properties == true || properties.nil?
+      Query.new(self, properties, &b)
     end
 
 
@@ -207,6 +191,10 @@ module Persistence::Sequel
       query(properties, &b).to_a
     end
 
+    def get_all(properties=nil)
+      query(properties).to_a
+    end
+
     # like get_many_with_dataset but just gets a single row, or nil if not found. adds limit(1) to the dataset for you.
     def get_with_dataset(properties=nil, &b)
       query(properties, &b).single_result
@@ -220,7 +208,7 @@ module Persistence::Sequel
       result && result[property]
     end
 
-    def get_with_key(id, properties=nil)
+    def get_by_id(id, properties=nil)
       query(properties) do |dataset, property_columns|
         filter = @identity_mapper.make_filter(id, property_columns[@identity_property])
         dataset.filter(filter)
@@ -239,7 +227,7 @@ module Persistence::Sequel
     end
 
     def get_many_by_property(property, value, properties_to_fetch=nil)
-      properties_to_fetch ||= @default_properties
+      properties_to_fetch ||= @default_properties.dup
       properties_to_fetch[property] = true
       query(properties_to_fetch) do |dataset, property_columns|
         filter = mapper(property).make_filter(value, property_columns[property])
@@ -258,10 +246,14 @@ module Persistence::Sequel
 
 
 
-    def has_key?(id)
+    def contains_id?(id)
       dataset = dataset_to_select_tables(@main_table)
       id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[@main_table]])
       dataset.filter(id_filter).select(1).limit(1).single_value ? true : false
+    end
+
+    def contains?(entity)
+      id = entity.id and contains_id?(id)
     end
 
 
@@ -269,21 +261,25 @@ module Persistence::Sequel
 
     # Calls one of store_new (insert) or update as appropriate.
     #
-    # Where a table is used to supply an ID sequence granting identities to persisted entities,
-    # the presence of an ID on the entity is used as a hint that it already exists in the repository
-    # hence should be updated rather than inserted.
+    # Where the repo allocates_ids, you can supply an entity without an ID and store_new will be called.
     #
-    # Where there isn't such an ID sequence, it will just try an insert and fall back on an update
-    # if the insert fails with an IdentityConflict.
-    # (TODO: it could 'replace into table' or 'insert ... on duplicate key update' where supported)
+    # If the entity has an ID, it will check whether it's currently contained in the repository
+    # before calling store_new or update as appropriate.
     def store(entity)
-      if @id_sequence_table
-        entity.id ? update(entity) : store_new(entity)
+      id = entity.id
+      if id
+        transaction do
+          if contains_id?(id)
+            update(entity)
+          else
+            store_new(entity)
+          end
+        end
       else
-        begin
+        if allocates_ids?
           store_new(entity)
-        rescue Persistence::IdentityConflict
-          update(entity)
+        else
+          raise Persistence::MissingIdentity
         end
       end
       entity
@@ -403,7 +399,7 @@ module Persistence::Sequel
     def post_delete(entity)
     end
 
-    def clear_key(id)
+    def delete_id(id)
       entity = construct_entity(@identity_property => id)
       delete(entity)
     end

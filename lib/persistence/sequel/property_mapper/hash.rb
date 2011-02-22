@@ -1,6 +1,3 @@
-require 'persistence/sequel'
-require 'set'
-
 module Persistence::Sequel
   # A property which is a hash of strings to other primitive values. Persisted 'all in one go'
   # in a separate table.

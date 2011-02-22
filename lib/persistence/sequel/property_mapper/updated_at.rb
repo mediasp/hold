@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper/column'
-
 module Persistence::Sequel
   class PropertyMapper::UpdatedAt < PropertyMapper::Column
     def build_insert_row(entity, table, row, id=nil)

@@ -1,5 +1,3 @@
-require 'persistence/sequel/property_mapper'
-
 module Persistence::Sequel
   # Maps to an associated object which is fetched by id from a target repository using a foriegn key column
   class PropertyMapper::ForeignKey < PropertyMapper
@@ -30,7 +28,7 @@ module Persistence::Sequel
     end
 
     def load_value(row, id=nil, version=nil)
-      fkey = row[@column_alias] and target_repo.get_with_key(fkey, version)
+      fkey = row[@column_alias] and target_repo.get_by_id(fkey, version)
     end
 
     def pre_insert(entity)

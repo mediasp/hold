@@ -1,7 +1,3 @@
-require 'persistence/sequel'
-require 'persistence/interfaces'
-require_later 'persistence/sequel/query'
-
 module Persistence::Sequel
   class QueryArrayCell
     include Persistence::ArrayCell

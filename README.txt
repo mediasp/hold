@@ -3,7 +3,7 @@ Persistence
 
 A ruby library geared towards separating persistence concerns from data model classes. It includes:
 
-- Generic repository-style persistence interfaces for a variety of data structures, from just a simple persistence Cell, to an ArrayCell, an ObjectCell, a HashRepository, to an IdentityHashRepository, which persists objects keyed by an identity property and matches the interface of many data stores.
+- Generic repository-style persistence interfaces for a variety of data structures, from just a simple persistence Cell, to an ArrayCell, an ObjectCell, a HashRepository, SetRepository and an IdentitySetRepository, which persists objects keyed by an identity property and matches the interface of many data stores.
 - In-memory example implementations of these interfaces
 - Database-backed implementations based on the Sequel library
    - These implement an additional interface specific to Sequel-backed persistence
