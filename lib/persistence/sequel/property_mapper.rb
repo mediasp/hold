@@ -142,33 +142,24 @@ module Persistence::Sequel
     # Todo: split off general dependency injection logic here and in repository_set
     def repo_dependency(model_class, options={})
       dep_name = options[:name] || :target_repo
-      superclass_repo_allowed = options[:allow_superclass]
       initial_value = options[:initial_value]
 
       instance_eval "def #{dep_name}; @#{dep_name} or raise 'missing dependency #{dep_name}'; end", __FILE__, __LINE__
       class << self; self; end.send(:define_method, "#{dep_name}=") do |repo|
-        unless (superclass_repo_allowed ? repo.can_get_class?(model_class) : repo.model_class == model_class)
-          raise "model_class mismatch for repository dependency of property mapper #{@property_name}"
-        end
         instance_variable_set("@#{dep_name}", repo)
       end
       if initial_value
         send("#{dep_name}=", initial_value)
       else
         @unresolved_repo_deps ||= []
-        @unresolved_repo_deps << [dep_name, model_class, superclass_repo_allowed]
+        @unresolved_repo_deps << [dep_name, model_class]
       end
     end
 
     def get_repo_dependencies_from(repo_set)
-      (@unresolved_repo_deps || []).each do |dep_name, model_class, superclass_repo_allowed|
-        repo = if superclass_repo_allowed
-          repo_set.repo_for_model_class_or_superclass(model_class) or
-            raise "Couldn't find repo of model_class (or superclass of model_class) #{model_class.inspect} for property mapper #{@property_name}"
-        else
-          repo_set.repo_for_model_class(model_class) or
-            raise "Couldn't find repo of model_class #{model_class.inspect} for property mapper #{@property_name}"
-        end
+      (@unresolved_repo_deps || []).each do |dep_name, model_class|
+        repo = repo_set.repo_for_model_class(*model_class) or
+          raise "Couldn't find repo for model class #{model_class.inspect} for property mapper #{@property_name}"
         send("#{dep_name}=", repo)
       end
     end

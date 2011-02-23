@@ -16,16 +16,15 @@ module Persistence
 
     attr_reader :repos
 
-    # Some more fine-grained dependency-finding interfaces to get a repository for a
-    # particular model_class or a superclass or polymorphic union thereof.
+    # Dependency-finding interface to get a repository for a particular model_class
+    # (or polymorphic repo for a set of model classes)
     # TODO: ability to specify if you need a writeable repo or just a readable one.
-
-    def repo_for_model_class(model_class)
-      @repos_by_model_class[model_class]
-    end
-
-    def repo_for_model_class_or_superclass(model_class)
-      @repos_by_model_class[model_class] || @repos.find {|r| r.can_get_class?(model_class)}
+    def repo_for_model_class(*model_classes)
+      if model_classes.length == 1
+        @repos_by_model_class[model_classes.first]
+      end or @repos.find do |r|
+        model_classes.all? {|model_class| r.can_get_class?(model_class)}
+      end
     end
 
     def repo(name, klass, *args)

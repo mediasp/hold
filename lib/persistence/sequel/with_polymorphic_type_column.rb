@@ -12,8 +12,7 @@ module Persistence::Sequel
     end
 
     def construct_entity(property_hash, row=nil)
-      return super unless row
-      type_value = row[:type]
+      type_value = row && row[:type] or return super
       klass = @type_to_class_mapping[type_value || @restricted_to_types.first] or
         raise "WithPolymorphicTypeColumn: type column value #{type_value} not found in mapping"
       klass.new(property_hash)

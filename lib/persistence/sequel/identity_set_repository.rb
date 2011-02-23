@@ -33,6 +33,10 @@ module Persistence::Sequel
       @property_mappers.freeze
     end
 
+    def inspect
+      "<##{self.class}: #{@model_class}>"
+    end
+
     def allocates_ids?
       !!@id_sequence_table
     end

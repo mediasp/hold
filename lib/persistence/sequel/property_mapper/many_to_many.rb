@@ -66,7 +66,7 @@ module Persistence::Sequel
         dataset = dataset.filter(@filter) if @filter
         dataset = dataset.distinct if @distinct
         @qualified_order_column ? dataset.order(@qualified_order_column) : dataset
-      end.to_a(lazy)
+      end.to_a
     end
 
     # efficient batch load for the non-lazy case
