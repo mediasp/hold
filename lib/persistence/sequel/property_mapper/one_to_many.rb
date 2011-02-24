@@ -48,7 +48,7 @@ module Persistence::Sequel
           raise "OneToManyMapper: Expected ForeignKey mapper with name #{@foreign_key_property_name}"
         end
         unless mapper.target_repo.can_get_class?(@repository.model_class)
-          raise "OneToManyMapper: ForeignKey mapper's target repo can't get our repository's model_class"
+          raise "OneToManyMapper: ForeignKey mapper's target repo #{mapper.target_repo.inspect} can't get our repository's model_class #{@repository.model_class}"
         end
         mapper
       end
@@ -160,7 +160,7 @@ module Persistence::Sequel
 
     def pre_update(entity, update_entity)
       # if an update is specified for this property, find out what the existing values are first:
-      load_value(nil, entity.id, 'identity') if @writeable && update_entity[@property_name]
+      load_value(nil, entity.id) if @writeable && update_entity[@property_name]
     end
 
     def build_update_row(entity, table, row, id=nil)
@@ -186,7 +186,7 @@ module Persistence::Sequel
 
     def pre_delete(entity)
       return unless @manual_cascade_delete
-      load_value(nil, entity.id, 'identity').each {|value| target_repo.delete(value)}
+      load_value(nil, entity.id).each {|value| target_repo.delete(value)}
     end
   end
 end
