@@ -31,8 +31,7 @@ module Persistence::Sequel
       fkey = row[@column_alias] and target_repo.get_by_id(fkey, version)
     end
 
-    def pre_insert(entity)
-      value = entity[@property_name]
+    def ensure_value_has_id_where_present(value)
       if value && !value.id
         if @auto_store_new
           target_repo.store_new(value)
@@ -40,6 +39,14 @@ module Persistence::Sequel
           raise "value for ForeignKey mapped property #{@property_name} has no id, and :auto_store_new not specified"
         end
       end
+    end
+
+    def pre_insert(entity)
+      ensure_value_has_id_where_present(entity[@property_name])
+    end
+
+    def pre_update(entity, update_entity)
+      ensure_value_has_id_where_present(update_entity[@property_name])
     end
 
     def build_insert_row(entity, table, row, id=nil)
