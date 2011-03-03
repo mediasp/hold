@@ -303,6 +303,9 @@ module Persistence
     def get_all
       raise UnsupportedOperation
     end
+
+    def can_get_class?(klass); true; end
+    def can_set_class?(klass); true; end
   end
 
   # A special kind of SetRepository which stores Objects whose identities are determined by

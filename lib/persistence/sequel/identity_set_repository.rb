@@ -53,6 +53,12 @@ module Persistence::Sequel
       model_class == @model_class
     end
 
+    # see Persistence::Sequel::RepositoryObserver for the interface you need to expose to be an observer here.
+    def add_observer(observer)
+      @observers ||= []
+      @observers << observer
+    end
+
     # convenience to get a particular property mapper of this repo:
     def mapper(name)
       @property_mappers[name] or raise "#{self.class}: no such property mapper #{name.inspect}"
@@ -327,11 +333,16 @@ module Persistence::Sequel
       end
     end
 
-    # hooks to override
+    # Remember to call super if you override this.
+    # If you do any extra inserting in an overridden pre_insert, call super beforehand
     def pre_insert(entity)
+      @observers.each {|observer| observer.pre_insert(self, entity)} if @observers
     end
 
+    # Remember to call super if you override this.
+    # If you do any extra inserting in an overridden post_insert, call super afterwards
     def post_insert(entity, rows, insert_id)
+      @observers.each {|observer| observer.post_insert(self, entity, rows, insert_id)} if @observers
     end
 
     def update(entity, update_entity=entity)
@@ -359,11 +370,16 @@ module Persistence::Sequel
       end
     end
 
-    # hooks to override
+    # Remember to call super if you override this.
+    # If you do any extra updating in an overridden pre_update, call super beforehand
     def pre_update(entity, update_entity)
+      @observers.each {|observer| observer.pre_update(self, entity, update_entity)} if @observers
     end
 
+    # Remember to call super if you override this.
+    # If you do any extra updating in an overridden post_update, call super afterwards
     def post_update(entity, update_entity, rows)
+      @observers.each {|observer| observer.post_update(self, entity, update_entity, rows)} if @observers
     end
 
     def update_by_id(id, update_entity)
@@ -396,11 +412,16 @@ module Persistence::Sequel
       end
     end
 
-    # hooks to override
+    # Remember to call super if you override this.
+    # If you do any extra deleting in an overridden pre_delete, call super beforehand
     def pre_delete(entity)
+      @observers.each {|observer| observer.pre_delete(self, entity)} if @observers
     end
 
+    # Remember to call super if you override this.
+    # If you do any extra deleting in an overridden post_delete, call super afterwards
     def post_delete(entity)
+      @observers.each {|observer| observer.post_delete(self, entity)} if @observers
     end
 
     def delete_id(id)
