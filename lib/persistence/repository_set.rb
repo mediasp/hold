@@ -14,7 +14,7 @@ module Persistence
       inject_into(self) # clever huh
     end
 
-    attr_reader :repos
+    attr_reader :repos, :db
 
     # Dependency-finding interface to get a repository for a particular model_class
     # (or polymorphic repo for a set of model classes)
