@@ -3,11 +3,13 @@ module Persistence::Sequel
   # Responsibility of a PropertyMapper is to map data for a particular property of a model class, between the
   # instances of that model class, and the database
   class PropertyMapper
+    def self.setter_dependencies_for(options={}); {}; end
+
     attr_reader :repository, :property_name, :property
 
     # If you pass a block, it will be instance_evalled, allowing you to create one-off custom property mappers
     # by overriding bits of this implementation in the block.
-    def initialize(repo, property_name, &block)
+    def initialize(repo, property_name, options=nil, &block)
       @repository = repo
       @property_name = property_name
       instance_eval(&block) if block
@@ -132,36 +134,5 @@ module Persistence::Sequel
     def post_update(entity, update_entity, rows, data_from_pre_update)
     end
 
-
-    # A helper for declaring a dependency on another repository for a particular model class.
-    #
-    # These dependencies don't have to be passed at initialization time; they can be resolved afterwards
-    # from a repository_set, via a call to get_repo_dependencies_from which is done when constructing via
-    # a repo_set.
-    #
-    # Todo: split off general dependency injection logic here and in repository_set
-    def repo_dependency(model_class, options={})
-      dep_name = options[:name] || :target_repo
-      initial_value = options[:initial_value]
-
-      instance_eval "def #{dep_name}; @#{dep_name} or raise 'missing dependency #{dep_name}'; end", __FILE__, __LINE__
-      class << self; self; end.send(:define_method, "#{dep_name}=") do |repo|
-        instance_variable_set("@#{dep_name}", repo)
-      end
-      if initial_value
-        send("#{dep_name}=", initial_value)
-      else
-        @unresolved_repo_deps ||= []
-        @unresolved_repo_deps << [dep_name, model_class]
-      end
-    end
-
-    def get_repo_dependencies_from(repo_set)
-      (@unresolved_repo_deps || []).each do |dep_name, model_class|
-        repo = repo_set.repo_for_model_class(*model_class) or
-          raise "Couldn't find repo for model class #{model_class.inspect} for property mapper #{@property_name}"
-        send("#{dep_name}=", repo)
-      end
-    end
   end
 end

@@ -1,6 +1,13 @@
 module Persistence::Sequel
   # Maps to an associated object which is fetched by id from a target repository using a foriegn key column
   class PropertyMapper::ForeignKey < PropertyMapper
+    def self.setter_dependencies_for(options={})
+      features = [*options[:model_class]].map {|klass| [:get_class, klass]}
+      {:target_repo => [Persistence::IdentitySetRepository, *features]}
+    end
+
+    attr_accessor :target_repo
+
     attr_reader :columns_aliases_and_tables_for_select, :column_alias, :column_name, :table,
       :column_qualified, :auto_store_new, :model_class
 
@@ -23,8 +30,6 @@ module Persistence::Sequel
 
       @auto_store_new = options[:auto_store_new] || false
       @model_class = options[:model_class] or raise ArgumentError
-
-      repo_dependency(@model_class, :initial_value => options[:repo], :allow_superclass => true)
     end
 
     def load_value(row, id=nil, version=nil)

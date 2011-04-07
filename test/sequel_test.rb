@@ -21,10 +21,10 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       varchar :abc
       varchar :def
     end
-    Persistence::Sequel::IdentitySetRepository.new(@db, AbcDef, :test_table) do
+    Persistence::Sequel::IdentitySetRepository(AbcDef, :test_table) do
       map_column :abc
       map_column :def
-    end
+    end.new(@db)
   end
 
   it "should allocate an id when storing something which doesn't have one, where there's an id property mapped to an auto_increment/serial primary key" do
@@ -75,7 +75,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         varchar :string, :null => false
       end
       @model_class = LazyData::StructWithIdentity(:string)
-      repo = Persistence::Sequel::IdentitySetRepository.new(@db, @model_class, :test_table) {map_column :string}
+      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {map_column :string}.new(@db)
       entity = @model_class.new(:string => 'foo')
       repo.store(entity)
       assert_equal 'foo', @db[:test_table].select(:string).filter(:id => entity.id).single_value
@@ -89,9 +89,9 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         varchar :string_column_with_particular_name, :null => false
       end
       @model_class = LazyData::StructWithIdentity(:string)
-      repo = Persistence::Sequel::IdentitySetRepository.new(@db, @model_class, :test_table) do
+      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_column :string, :column_name => :string_column_with_particular_name
-      end
+      end.new(@db)
       entity = @model_class.new(:string => 'foo')
       repo.store(entity)
       assert_equal 'foo', @db[:test_table].select(:string_column_with_particular_name).filter(:id => entity.id).single_value
@@ -107,9 +107,9 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         float :float
       end
       @model_class = LazyData::StructWithIdentity(:integer, :datetime, :float)
-      repo = Persistence::Sequel::IdentitySetRepository.new(@db, @model_class, :test_table) do
+      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_column :integer; map_column :datetime; map_column :float
-      end
+      end.new(@db)
       entity = @model_class.new(
         :integer => 123,
         :datetime => Time.utc(2000,1,2,12,30),
@@ -133,11 +133,11 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         datetime :updated_at, :null => false
       end
       @model_class = LazyData::StructWithIdentity(:created_at, :updated_at)
-      @repo = Persistence::Sequel::IdentitySetRepository.new(@db, @model_class, :test_table) do
+      @repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         # the args here can all actually be left out as they're the defaults, but to demonstrate:
         map_created_at :created_at
         map_updated_at :updated_at, :column_name => :updated_at
-      end
+      end.new(@db)
     end
 
     it "should set created_at and updated_at to the current time when first storing an object, also setting the values on the entity instance used" do
@@ -181,12 +181,13 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       end
       bar_model_class = @bar_model_class = LazyData::StructWithIdentity(:string)
       @foo_model_class = LazyData::StructWithIdentity(:bar)
-      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @bar_model_class, :bar) do
+      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
         map_column :string
-      end
-      @foo_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @foo_model_class, :foo) do
-        map_foreign_key :bar, :model_class => bar_model_class, :repo => bar_repo
-      end
+      end.new(@db)
+      @foo_repo = Persistence::Sequel::IdentitySetRepository(@foo_model_class, :foo) do
+        map_foreign_key :bar, :model_class => bar_model_class
+      end.new(@db)
+      @foo_repo.mapper(:bar).target_repo = @bar_repo
     end
 
     it "should map a property whose schema refers to another Object schema with identity, to a foreign key column using those identity values, and using a repo for that schema to look up the instances" do
@@ -261,13 +262,15 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       bar_model_class = @bar_model_class = Bar #LazyData::StructWithIdentity(:foos)
       foo_model_class = @foo_model_class = Foo #LazyData::StructWithIdentity(:bar)
       foo_repo = 123
-      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @bar_model_class, :bar) do
+      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
         map_one_to_many :foos, :model_class => foo_model_class, :property => :bar
-      end
-      foo_repo = @foo_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @foo_model_class, :foo) do
-        map_foreign_key :bar, :model_class => bar_model_class, :repo => bar_repo
-      end
+      end.new(@db)
+      foo_repo = @foo_repo = Persistence::Sequel::IdentitySetRepository(@foo_model_class, :foo) do
+        map_foreign_key :bar, :model_class => bar_model_class
+      end.new(@db)
+
       bar_repo.mapper(:foos).target_repo = foo_repo
+      foo_repo.mapper(:bar).target_repo = bar_repo
 
       assert_same bar_repo.mapper(:foos).target_repo, foo_repo
       assert_same foo_repo.mapper(:bar).target_repo, bar_repo
@@ -355,12 +358,12 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         integer :base_id
         varchar :def
       end
-      Persistence::Sequel::IdentitySetRepository.new(@db, AbcDef, :base) do
+      Persistence::Sequel::IdentitySetRepository(AbcDef, :base) do
         use_table :base
         use_table :extra, :id_column => :base_id
         map_column :abc
         map_column :def, :table => :extra
-      end
+      end.new(@db)
     end
   end
 
@@ -377,13 +380,13 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         varchar :abc
         varchar :def
       end
-      Persistence::Sequel::IdentitySetRepository.new(@db, AbcDef, :test_table) do
-        extend Persistence::Sequel::WithPolymorphicTypeColumn
+      Class.new(Persistence::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
         use_table :test_table
         set_type_column(:type, the_superclass => 'super', the_subclass => 'sub')
+        set_model_class AbcDef
         map_column :abc
         map_column :def
-      end
+      end.new(@db)
     end
 
     it "should roundtrip a subclass instance, persisting its class" do
@@ -409,29 +412,29 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         varchar :def, :null => true
       end
       the_baseclass = @baseclass = Class.new(LazyData::Struct) do
+        def self.to_s; 'baseclass'; end
         identity_attr
         lazy_attr_accessor :abc
       end
       the_subclass = @subclass = Class.new(@baseclass) do
+        def self.to_s; 'subclass'; end
         lazy_attr_accessor :def
       end
 
-      @baseclass_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @baseclass, :base) do
-        extend Persistence::Sequel::WithPolymorphicTypeColumn
+      @baseclass_repo_class = Class.new(Persistence::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
         use_table :base, :id_sequence => true
         set_type_column(:type, the_baseclass => 'baseclass', the_subclass => 'subclass')
+        set_model_class(the_baseclass)
         map_column :abc
       end
-
-      @subclass_repo = Persistence::Sequel::IdentitySetRepository.new(@db, @subclass, :base) do
-        extend Persistence::Sequel::WithPolymorphicTypeColumn
-        use_table :base, :id_column => :id, :id_sequence => true
-        set_type_column(:type, the_baseclass => 'baseclass', the_subclass => 'subclass')
-        restrict_class_to(the_subclass)
+      @subclass_repo_class = Class.new(@baseclass_repo_class) do
+        set_model_class(the_subclass)
         use_table :sub, :id_column => :base_id, :restricts_type => true
-        map_column :abc
         map_column :def, :table => :sub
       end
+
+      @baseclass_repo = @baseclass_repo_class.new(@db)
+      @subclass_repo = @subclass_repo_class.new(@db)
     end
 
     it "subclass repo should roundtrip a subclass instance, persisting its class and subclass-specific properties" do

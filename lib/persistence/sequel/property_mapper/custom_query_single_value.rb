@@ -13,14 +13,17 @@ module Persistence::Sequel
   #      .filter(:boz_id => id)
   #  end
   class PropertyMapper::CustomQuerySingleValue < PropertyMapper
+    def self.setter_dependencies_for(options={})
+      features = [*options[:model_class]].map {|klass| [:get_class, klass]}
+      {:target_repo => [IdentitySetRepository, *features]}
+    end
+
     attr_reader :model_class
+    attr_accessor :target_repo
 
     def initialize(repo, property_name, options={}, &block)
       super(repo, property_name, &nil) # re &nil: our &block is otherwise implicitly passed on to super it seems, bit odd
-
       @model_class = options[:model_class] or raise ArgumentError
-      repo_dependency(@model_class, :initial_value => options[:repo], :allow_superclass => true)
-
       @query_block = block
     end
 

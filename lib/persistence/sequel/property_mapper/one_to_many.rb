@@ -20,6 +20,13 @@ module Persistence::Sequel
   # If you specify a denormalized_count_column, this will be used to store the count of associated
   # objects on a column on the main table of the parent object.
   class PropertyMapper::OneToMany < PropertyMapper
+    def self.setter_dependencies_for(options={})
+      features = [*options[:model_class]].map {|klass| [:get_class, klass]}
+      {:target_repo => [IdentitySetRepository, *features]}
+    end
+
+    attr_accessor :target_repo
+    
     attr_reader :writeable, :manual_cascade_delete, :order_property,
       :foreign_key_property_name, :denormalized_count_column, :model_class
 
@@ -38,7 +45,6 @@ module Persistence::Sequel
       @denormalized_count_column = options[:denormalized_count_column]
 
       @model_class = options[:model_class] or raise ArgumentError
-      repo_dependency(@model_class, :initial_value => options[:repo])
     end
 
     def foreign_key_mapper

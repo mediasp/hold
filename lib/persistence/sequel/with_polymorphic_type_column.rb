@@ -1,19 +1,69 @@
 module Persistence::Sequel
-  # Mixin for Sequel::IdentitySetRepository which adds support for a polymorphic type column which
+  # Subclass of Sequel::IdentitySetRepository which adds support for a polymorphic type column which
   # is used to persist the class of the model.
-  module WithPolymorphicTypeColumn
+  class IdentitySetRepository::WithPolymorphicTypeColumn < IdentitySetRepository
+
+    class << self
+      def type_column; @type_column ||= superclass.type_column; end
+      def type_column_table; @type_column_table ||= superclass.type_column_table; end
+      def class_to_type_mapping; @class_to_type_mapping ||= (superclass.class_to_type_mapping if superclass < IdentitySetRepository::WithPolymorphicTypeColumn); end
+      def type_to_class_mapping; @type_to_class_mapping ||= (superclass.type_to_class_mapping if superclass < IdentitySetRepository::WithPolymorphicTypeColumn); end
+      def restricted_to_types; @restricted_to_types ||= (superclass.restricted_to_types if superclass < IdentitySetRepository::WithPolymorphicTypeColumn); end
+
+      def supported_classes
+        if restricted_to_types
+          type_to_class_mapping.values_at(*restricted_to_types)
+        else
+          class_to_type_mapping.keys
+        end
+      end
+
+    private
+
+      def set_type_column(column, table, mapping=nil)
+        unless superclass == IdentitySetRepository::WithPolymorphicTypeColumn
+          raise "set_type_column only on the topmost IdentitySetRepository::WithPolymorphicTypeColumn subclass"
+        end
+        table, mapping = tables.first.first, table if table.is_a?(Hash)
+        @type_column = column
+        @type_column_table = table
+        @class_to_type_mapping = mapping
+        @type_to_class_mapping = mapping.invert
+      end
+
+      def set_model_class(model_class)
+        @model_class = model_class
+        raise "set_type_column before set_model_class" unless class_to_type_mapping
+        klasses = class_to_type_mapping.keys.select {|klass| klass <= model_class}
+        @restricted_to_types = if klasses.size < @class_to_type_mapping.size
+          class_to_type_mapping.values_at(*klasses)
+        end
+      end
+    end
+
+    def initialize(db)
+      super
+      @qualified_type_column = Sequel::SQL::QualifiedIdentifier.new(self.class.type_column_table, self.class.type_column)
+      @aliased_type_column = Sequel::SQL::AliasedExpression.new(@qualified_type_column, :type)
+
+      @restricted_to_types = self.class.restricted_to_types
+      @tables_restricting_type = {}
+      self.class.tables.each do |name, options|
+        @tables_restricting_type[name] = true if options[:restricts_type]
+      end
+    end
 
     def can_get_class?(model_class)
-      @class_to_type_mapping.has_key?(model_class)
+      self.class.supported_classes.include?(model_class)
     end
 
     def can_set_class?(model_class)
-      @class_to_type_mapping.has_key?(model_class)
+      self.class.supported_classes.include?(model_class)
     end
 
     def construct_entity(property_hash, row=nil)
       type_value = row && row[:type] or return super
-      klass = @type_to_class_mapping[type_value || @restricted_to_types.first] or
+      klass = self.class.type_to_class_mapping[type_value || @restricted_to_types.first] or
         raise "WithPolymorphicTypeColumn: type column value #{type_value} not found in mapping"
       klass.new(property_hash)
     end
@@ -26,7 +76,7 @@ module Persistence::Sequel
       columns_by_property, aliased_columns, tables = super
       unless @restricted_to_types && @restricted_to_types.length == 1
         aliased_columns << @aliased_type_column
-        tables << @type_column_table unless tables.include?(@type_column_table)
+        tables << self.class.type_column_table unless tables.include?(self.class.type_column_table)
       end
       return columns_by_property, aliased_columns, tables
     end
@@ -48,40 +98,10 @@ module Persistence::Sequel
 
     private
 
-      def use_table(name, options={})
-        super
-        if options[:restricts_type]
-          raise "call restrict_type_to before passing :restricts_type => true to use_table" unless @tables_restricting_type
-          @tables_restricting_type[name] = true
-        end
-      end
-
-      def set_type_column(column, table=nil, mapping=nil, inverse_mapping=nil)
-        table, mapping = nil, table if table.is_a?(Hash)
-
-        @type_column = column
-        @type_column_table = table || @main_table
-
-        @qualified_type_column = Sequel::SQL::QualifiedIdentifier.new(@type_column_table, @type_column)
-        @aliased_type_column = Sequel::SQL::AliasedExpression.new(@qualified_type_column, :type)
-
-        @class_to_type_mapping = mapping || {}
-        @type_to_class_mapping = inverse_mapping || @class_to_type_mapping.invert
-      end
-
-      def restrict_class_to(*klasses)
-        restrict_type_to(*@class_to_type_mapping.values_at(*klasses))
-      end
-
-      def restrict_type_to(*types)
-        @restricted_to_types = types
-        @tables_restricting_type = {}
-      end
-
       def insert_row_for_entity(entity, table, id=nil)
         row = super
-        if table == @type_column_table
-          row[@type_column] = @class_to_type_mapping[entity.class] or
+        if table == self.class.type_column_table
+          row[self.class.type_column] = self.class.class_to_type_mapping[entity.class] or
             raise "WithPolymorphicTypeColumn: class #{entity.class} not found in mapping"
         end
         row

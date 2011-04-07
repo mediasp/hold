@@ -27,8 +27,15 @@ module Persistence::Sequel
   #   - Rows in the join table are deleted before the parent object is deleted (unless :manual_cascade_delete
   #     => false is specified hinting that ON CASCADE DELETE is set on the foreign key so we needn't bother)
   class PropertyMapper::ManyToMany < PropertyMapper
+    def self.setter_dependencies_for(options={})
+      features = [*options[:model_class]].map {|klass| [:get_class, klass]}
+      {:target_repo => [IdentitySetRepository, *features]}
+    end
+
+    attr_accessor :target_repo
+    
     attr_reader :join_table, :left_key, :right_key, :order_column, :writeable,
-                :manual_cascade_delete, :auto_store_new, :distinct, :filter
+                :manual_cascade_delete, :auto_store_new, :distinct, :filter, :model_class
 
     def initialize(repo, property_name, options, &block)
       super(repo, property_name, &nil)
@@ -51,7 +58,6 @@ module Persistence::Sequel
       @auto_store_new = options[:auto_store_new] || false
 
       @model_class = options[:model_class] or raise ArgumentError
-      repo_dependency(@model_class, :initial_value => options[:repo])
 
       # in case you want to override anything on the instance:
       instance_eval(&block) if block
