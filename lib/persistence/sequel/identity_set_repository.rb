@@ -42,7 +42,12 @@ module Persistence::Sequel
       end
 
       def setter_dependencies(instance=nil)
-        dependencies = {}
+        dependencies = {:observers => Wirer::Dependency.new(
+          :module   => Persistence::Sequel::RepositoryObserver,
+          :features => [[:observes_repo_for_class, model_class]],
+          :multiple => true,
+          :optional => true
+        )}
         property_mapper_args.each do |property_name, mapper_class, options, block|
           mapper_class.setter_dependencies_for(options, &block).each do |dep_name, dep_args|
             mapper_dep_name = :"#{property_name}__#{dep_name}"
@@ -52,9 +57,13 @@ module Persistence::Sequel
         dependencies
       end
 
-      def inject_dependency(instance, mapper_dep_name, value)
-        mapper_name, dep_name = mapper_dep_name.to_s.split('__', 2)
-        instance.mapper(mapper_name.to_sym).send("#{dep_name}=", value)
+      def inject_dependency(instance, dep_name, value)
+        if dep_name == :observers
+          value.each {|observer| instance.add_observer(observer)}
+        else
+          mapper_name, dep_name = dep_name.to_s.split('__', 2)
+          instance.mapper(mapper_name.to_sym).send("#{dep_name}=", value)
+        end
       end
 
     private
@@ -142,6 +151,10 @@ module Persistence::Sequel
     end
 
     # see Persistence::Sequel::RepositoryObserver for the interface you need to expose to be an observer here.
+    #
+    # If you're using Wirer to construct the repository, a better way to hook the repo up with observers is to
+    # add RepositoryObservers to the Wirer::Container and have them provide feature [:observes_repo_for_class, model_class].
+    # They'll then get picked up by our multiple setter_dependency and added as an observer just after construction.
     def add_observer(observer)
       @observers ||= []
       @observers << observer
