@@ -12,6 +12,7 @@ spec = Gem::Specification.new do |s|
   s.email = ["matthew@playlouder.com"]
   s.summary = "A library geared towards separating persistence concerns from data model classes"
 
+  s.add_development_dependency('rake')
   s.add_development_dependency('test-spec')
   s.add_development_dependency('mocha')
   s.add_development_dependency('json')
