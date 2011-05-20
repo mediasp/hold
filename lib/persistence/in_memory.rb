@@ -10,7 +10,7 @@ module Persistence
   ARG_EMPTY = Object.new.freeze # something different to everything else
 
   class InMemory::Cell
-    include Cell
+    include Persistence::Cell
 
     # new -- empty
     # new(nil) -- non-empty, value is nil
@@ -37,7 +37,7 @@ module Persistence
   end
 
   class InMemory::ArrayCell
-    include ArrayCell
+    include Persistence::ArrayCell
 
     def initialize(array=[])
       @array = array
@@ -61,7 +61,7 @@ module Persistence
   end
 
   class InMemory::ObjectCell < InMemory::Cell
-    include ObjectCell
+    include Persistence::ObjectCell
 
     def get
       @value && @value.dup
@@ -88,7 +88,7 @@ module Persistence
   end
 
   class InMemory::HashRepository
-    include HashRepository
+    include Persistence::HashRepository
 
     def initialize
       @hash = {}
@@ -112,7 +112,7 @@ module Persistence
   end
 
   class InMemory::SetRepository
-    include SetRepository
+    include Persistence::SetRepository
 
     def initialize
       @set = Set.new
@@ -136,7 +136,7 @@ module Persistence
   end
 
   class InMemory::IdentitySetRepository
-    include IdentitySetRepository
+    include Persistence::IdentitySetRepository
 
     def initialize(allocates_ids=false)
       @by_id = {}
