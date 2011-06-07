@@ -18,7 +18,7 @@ Of course there are various trade-offs involved when choosing between these two 
 
 ## Interfaces
 
-At the core of our approach is to define interfaces for the most common kinds of persistence objects. It being Ruby, you could just implement them just via duck-typing, but we also define some modules which serve to illustrate the method signatures, and provide a handful of default implementations and conveniences around the core interface.
+At the core of our approach is to define interfaces for the most common kinds of "things which persist stuff". It being Ruby, you could just implement them just via duck-typing, but we also define some modules which serve to illustrate the method signatures, and provide a handful of default implementations and conveniences around the core interface.
 
 (We also have some shared test suites which are intended to validate that a particular implementation complies with the contract; a TODO is to make these reusable outside this gem).
 
@@ -26,11 +26,15 @@ On one level, you could just use these interfaces and nothing else -- we supply 
 
 ### Rationale
 
-When trying to capture the concept of a repository, a common approach seems to be to define one big interface which tries to subsume all sorts of different kinds of data store (key-value store, array-like collection, set, full-blown relational or semi-relational datastore), where you sort of pick and choose which bits of it to implement.
+One approach which I've seen is to define one big 'store' interface which tries to subsume all sorts of different kinds of data store (key-value store, array-like collection, set, full-blown relational or semi-relational datastore), where you sort of pick and choose which bits of it to implement.
 
-This is a bit clunky; here we've tried to break it up into some more fine-grained interfaces for particular kinds of data stores, starting at the simplest possible: a Cell, and working our way up to an IdentitySetRepository, which corresponds to the CRUD-style interface of a typical object store which stores objects indexed by their identity.
+This is a bit clunky; here I've tried to break it up into some more fine-grained interfaces for particular kinds of data stores, starting at the simplest possible: a Cell, and working our way up to an IdentitySetRepository, which corresponds to the CRUD-style interface of a typical object store which stores objects indexed by their identity.
 
 Nevertheless, it would be possible to go even further in terms of breaking up into more fine-grained interfaces, for example separating out the reading and writing portions of the interfaces. Tricky call where exactly to cut off with this stuff, especially in ruby which is duck-typed, meaning you don't have to give a formal name to some subset of an interface in order to use it in practise. It would also be possible to define even richer interfaces beyond that of IdentitySetRepository, eg adding an interface for querying the store based on critera other than just the id, but we've not formalised this yet.
+
+One other thing which it might be worth adding interfaces for is transactionality. It's a tricky one though; while it'd be easy enough to add a 'transaction do ...' to the interface of individual repositories, often you'll have multiple repositories running off the same underlying database which you want to use inside the same transaction context. So for now transactional stuff isn't abstracted away from the underlying persistence mechanism; if you're using Sequel, you can just call .transaction on the underlying Sequel database for example. If you wanted more serious abstraction around transactions, it might be best done as part of adding support for the 'unit of work' pattern used by libraries like Hibernate, SQLAlchemy etc.
+
+Would be worth doing a review of the interface design here once we have some more implementations going, to see what works and what doesn't, what needs adjusting etc.
 
 ### Persistence::Cell
 
@@ -86,11 +90,86 @@ This is the biggest implementation of Persistence::IdentitySetRepository, and is
 
 It's essentially a mini ORM, but, unlike other Ruby ORMs, is based on the Repository pattern instead of an ActiveRecord-style approach; meaning you will have separate repository classes and data model classes. The nearest things you might compare it with might be Hibernate in the Java world, or SQLAlchemy in the Python, although it's not trying to be quite as fully-featured as these. In particular it doesn't have the concept of a "session" or "unit of work", and it's not quite so clever about persisting changes to large object graphs all in one go. (These might be useful additions at some point, but would take some care to do well).
 
-Here follows a selection of the core features of Persistence::Sequel, with some usage examples in each case:
+Here follows a selection of the core features of Persistence::Sequel, with some usage examples in each case.
+
+For this I'll use the following schema:
+
+    create table authors (
+      id int not null auto_increment primary key,
+      title varchar(255) not null,
+      fave_breakfast_cereal varchar(255)
+    );
+    create table books (
+      id int not null auto_increment primary key,
+      created_at datetime not null,
+      updated_at datetime,
+      title varchar(255) not null,
+      author_id int not null,
+      foreign key (author_id) references authors (id)
+    );
+    create table influenced_by (
+      author_id int not null,
+      book_id int not null,
+      primary key (author_id, book_id),
+      foreign key (author_id) references authors (id),
+      foreign key (book_id) references books (id)
+    );
 
 ### Creating a repository for a simple data model class
 
+There is a class-based DSL which is used to configure a new repository class. The simplest example would be:
+
+    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal)
+
+    class AuthorRepository < Persistence::Sequel::IdentitySetRepository
+      set_model_class Author
+      use_table :authors, :id_sequence => true
+      map_column :title
+      map_column :fave_breakfast_cereal
+    end
+
+About the model class:
+
+- There is a basic protocol which your model class needs to observe, in order to work here, so the repository can create, update and read the properties off model instances. For now, the only officially-supported model classes are subclasses of LazyData::Struct from the lazy_data gem, and it's best to look at this for reference. High on the TODO list though is to make it clear exactly what interface you need to support, and to test against some different model class implementations. There's certainly nothing in principle stopping it working with a very basic lightweight plain-old-ruby model class; in fact LazyData pretty much is just one of these, plus some small conveniences (including support for lazy property loading).
+
+- The model class is also required to have an attribute called 'id', and to implement the :==/:eql/:hash contract based on this id property. LazyData::StructWithIdentity is the best way of achieving this at present.
+
+About the table:
+
+- The table must have a single-column primary key. By default it's assumed to be called 'id', but you can override this by specifying `use_table :foo, :id_column => :bar`
+- There is support for tables whose primary key is autogenerated via a sequence/autoincrement, or equally for tables whose primary key is not autogenerated. If you have database-generated primary keys, you need to specify :id_sequence => true.
+
+About `map_column`
+
+- This maps a property on the model class, to a database column with (by default) the same name.
+- For now you'll need to do this explicitly for any model class property which you want to be persisted to and from a database column.
+- Any database columns which aren't mapped will just be silently ignored, as will any unmapped attributes on the model class.
+- TODO: maybe either warn about unmapped properties on the model class, or supply default mappings for them
+
+Note that a database connection is *not* required in order to declare one of these classes, only to instantiate one. This is most definitely intentional; we don't want to require that a database connection be present and active at code loading time.
+
 ### Basic CRUD
+
+    db = Sequel.connect("foo://bar", :logger => Logger.new(STDOUT))
+    author_repo = AuthorRepository.new(db)
+
+    > author = Author.new(:title => 'Joe')
+    > author_repo.store_new(author)
+    INSERT INTO `authors` (`title`) VALUES ('Joe')
+     => #<Author:0x1018f4b28 @values={:title=>"Joe", :id=>1}>
+
+    > author_repo.get_by_id(1)
+    SELECT `authors`.`title` AS `authors_title`, `authors`.`fave_breakfast_cereal` AS `authors_fave_breakfast_cereal`, `authors`.`id` AS `id` FROM `authors` WHERE (`authors`.`id` = 1) LIMIT 1
+     => #<Author:0x1018d6bf0 lazy, @values={:title=>"foo", :fave_breakfast_cereal=>nil, :id=>1}>
+
+    > author_repo.update(author, :title => 'Joe Bloggs')
+    UPDATE `authors` SET `title` = 'Joe Bloggs' WHERE (`id` = 1)
+     => #<Author:0x1018f4b28 @values={:title=>"Joe Bloggs", :id=>1}>
+
+    > author_repo.delete(author)
+    DELETE FROM `authors` WHERE (`id` = 2)
+     => nil
+
 
 ### Database-supplied ID sequences
 
