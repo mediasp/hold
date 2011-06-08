@@ -222,16 +222,101 @@ In particular, the property mapper has the opportunity to:
 - Specify which tables which need to be added into the FROM clause of this query in order for the above SELECT clause to work (although they need to be tables which the repository knows about, and the repository takes care of JOINing them. See the section on using multiple tables for more info, and note that this doesn't at present work for adding arbitrary eager-association-loading joins into a query, only for when the object being loaded is spread across multiple tables in a one-to-one fashion)
 - To load the value for this property for a particular object ID, given the sequel result row resulting from the above SELECT query (note it doesn't have to get the value from this query and its result row, it could for example do its own separate query if required eg to load associated objects).
 - Given a list of IDs and a list of result rows, to do the above in an efficient batched fashion. This provides a basic way to avoid the classic 'n+1' problem, eg the foreign key mapper uses this to do a `WHERE id IN (1,2,3,...)`
-- To do something relevant to this property {pre,post}_{insert,update,delete} of its parent object
+- To do something relevant to this property `{pre,post}_{insert,update,delete}` of its parent object
 - Make a Sequel filter expression which can be used to build a query querying for a particular value of this property
 
 When creating property mappers via the `map_*` class methods, you can generally specify a bunch of options to customize exactly which database columns, tables etc they use. Some examples follow.
 
 ### map_column
 
+This one's fairly self-explanatory and we mentioned it already above.
+
+Note that all the `map_*` have the property name on the model class as their first argument, and then a hash of options.
+
+With `map_column`, you can specify an overridden :column_name, if you don't want to use the default which is the same as the property name.
+
+    map_column :foo, :column_name => :something_other_than_foo
+
+If using multiple tables, you can also specify the table this property gets loaded from:
+
+    use_table :some_table
+    use_table :other_table
+    map_column :foo, :column_name => :some_column_on, :table => :some_table
+
+See the section on using multiple tables for more info about this; if you only use one table you needn't specify :table.
+
 ### map_created_at and map_updated_at
 
+These are like `map_column`, except:
+
+- `map_created_at` will automatically populate the column with the current time when storing for the first time
+- `map_updated_at` will automatically update the column with the current time when storing or updating
+
 ### map_foreign_key
+
+This is an important property mapper. It expects a foreign key column to be present on the table, and it uses another repository to load the value by ID using the foreign key.
+
+You need to specify the :model_class with this and other association mappers -- this is what tells it what sort of repository it's going to need in order to load the values pointed at by the foreign keys.
+
+The actual associated repository only needs to be passed in at initialization time -- or more precisely, it gets passed in during a post-initialization phase, since you need a way to handle cyclic dependencies between repositories when they have associations pointing at eachother.
+
+An example is in order (continuing on from our examples the AuthorRepository above):
+
+    Book = LazyData::StructWithIdentity(:title, :author)
+
+    class BookRepository < Persistence::Sequel::IdentitySetRepository
+      set_model_class Book
+      use_table :books, :id_sequence => true
+      map_column :title
+      map_foreign_key :author, :model_class => Author
+    end
+
+    book_repo = BookRepository.new(db)
+    book_repo.mapper(:author).target_repo = author_repo
+
+Then we can eg:
+
+    > book = Book.new(:title => 'War and peace', :author => author)
+    > book_repo.store_new(book)
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('War and peace', 1)
+     => #<Book:0x1018f8598 @values={:title=>"War and peace", :id=>1, :author=>#<Author:0x101903c18 @values={:title=>"foo", :fave_breakfast_cereal=>nil, :id=>1}>}>
+
+    > book = book_repo.get_by_id(1)
+     => #<Book:0x1018df0e8 lazy, @values={:title=>"War and peace", :id=>1}>
+    > book.author
+     => #<Author:0x1018d6f10 lazy, @values={:title=>"foo", :fave_breakfast_cereal=>nil, :id=>1}>
+
+Note: with this approach, you have to set the target_repo on the BookRepository's author property mapper, so that it knows how to load authors. Doing this wiring up gets a bit clunky if you have more than a handful of interconnected repositories; the good news is that Persistence::IdentitySetRepository supports the use of the Wirer dependency injection library to do all the wiring-up in these cases, see the section later on.
+
+There are some options: as with map_column you can override the name of the database column used for the foreign key:
+
+    map_foreign_key :author, :model_class => Author # :column_name defaults to :author_id
+    map_foreign_key :author, :model_class => Author, :column_name => :the_id_of_the_author
+
+You can also specify :auto_store_new:
+
+    map_foreign_key :author, :model_class => Author, :auto_store_new => true
+
+Where this is enabled and the value for this property is a 'new' object without an ID allocated to it, it will automatically go and store_new the referenced object in its repository beforehand. This means you can do stuff like:
+
+    > book = Book.new(:title => 'War and peace', :author => Author.new(:title => 'Tolstoy'))
+    > book_repo.store_new(book)
+    INSERT INTO `authors` (`title`) VALUES ('Tolstoy')
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('War and peace', 124)
+     => #<Book:0x101879720 @values={:title=>"War and peace", :id=>2, :author=>#<Author:0x101879748 @values={:title=>"Tolstoy", :id=>124}>}>
+
+It's implemented via a pre_insert hook on the property mapper, and I made it so you have to explicitly turn this behaviour on if you want it, partly to make you aware that this is all you're getting - this isn't (yet) part of some magical generalised mechanism for persisting arbitrary object graphs all in one go, and it won't necessarily cope well with cycles etc. But it is still quite handy.
+
+In particular though, note that there isn't any analagous functionality for updates - ie something like this won't necessarily have the effect you might hope for:
+
+    > book.author.title = 'Changed author'
+    > book_repo.store(book)
+
+The foreign-key-mapped property is just a reference to another object, you can update the reference via
+
+    > book_repo.update(book, :author => some_other_author)
+
+But the referenced object isn't treated as some kind of aggregate sub-object which can be updated as part of its parent object. For rationale, in this case consider that it's by no means guaranteed that we're the only book with this author; semantics are ambiguous as to whether you mean to update the author across all their books, or just replace the author on this particular book only with an updated author. For contrast, see map_one_to_many, which *does* allow for treating them, to an extent, as wholly-owned aggregate subobjects.
 
 ### map_one_to_many
 
