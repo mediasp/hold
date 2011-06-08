@@ -105,6 +105,7 @@ For this I'll use the following schema:
       updated_at datetime,
       title varchar(255) not null,
       author_id int not null,
+      position int not null,
       foreign key (author_id) references authors (id)
     );
     create table influenced_by (
@@ -319,6 +320,106 @@ The foreign-key-mapped property is just a reference to another object, you can u
 But the referenced object isn't treated as some kind of aggregate sub-object which can be updated as part of its parent object. For rationale, in this case consider that it's by no means guaranteed that we're the only book with this author; semantics are ambiguous as to whether you mean to update the author across all their books, or just replace the author on this particular book only with an updated author. For contrast, see map_one_to_many, which *does* allow for treating them, to an extent, as wholly-owned aggregate subobjects.
 
 ### map_one_to_many
+
+This is for classic one to many associations, like one Author has many Books. To demo this, let's revisit the AuthorRepository:
+
+    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal, :books)
+
+    class AuthorRepository < Persistence::Sequel::IdentitySetRepository
+      # ...
+      map_one_to_many :books, :model_class => Book, :property => :author
+    end
+
+    # ...
+
+    author_repo = AuthorRepository.new(db)
+    book_repo = BookRepository.new(db)
+    book_repo.mapper(:author).target_repo = author_repo
+    author_repo.mapper(:books).target_repo = book_repo
+
+For this to work, we're relying on Book having the specified corresponding propery `:author`, and this property being mapped via map_foreign_key. The value for the books property for author x is then defined to be an array of those books for whom the author property is author x. Or equivalently on the database side, those whose `:author_id` column matches our `:id`.
+
+Also, see what I meant earlier about cyclic references between repositories? this is why they have to be wired up after being instantiated, and why using Wirer makes it more pleasant if you're doing a lot of it.
+
+You can then use it like so to:
+
+    > author = author_repo.get_by_id(1)
+    > author.books
+    ...
+    SELECT `books`.`title` AS `books_title`, `books`.`author_id` AS `books_author_id`, `books`.`id` AS `id` FROM `books` WHERE (`books`.`author_id` = 1)
+    ...
+     => [#<Book:0x101892b58 lazy, @values={:title=>"War and peace", :id=>1, ...}>, #<Book:0x1018929c8 lazy, @values={:title=>"xyz", :id=>3}>]
+
+By default this property mapper is read-only, which is a common way to use it. For example in this case, if you wanted to make changes to the associations between books and authors, you'd probably do this by updating the author on the books, rather than updating the entire books collection on some author.
+
+However sometimes you *do* want to be able to treat the associated objects (books in this case) as aggregate subobjects which are effectively a wholly-owned part of their parent object (the author in this case), and to update them as part of the parent object. A better example for us might be the Tracks within a Release.
+
+If you want this kind of behaviour, you need to explicitly buy into it by specifying `:writeable => true`:
+
+    map_one_to_many :books, :model_class => Book, :property => :author, :writeable => true
+
+Now you are now able to create and update the entire collection of books all in one go:
+
+    > author = Author.new(
+      :title => 'Example',
+      :books => [
+        Book.new(:title => 'foo'),
+        Book.new(:title => 'bar'),
+        Book.new(:title => 'baz')
+      ]
+    )
+    > author_repo.store_new(author)
+    INSERT INTO `authors` (`title`) VALUES ('Example')
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('foo', 125)
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('bar', 125)
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('baz', 125)
+     => #<Author:0x1018e3558 @values={:title=>"Example", :books=>[#<Book:0x1018e3670 @values={:title=>"foo", :id=>4, :author=>#<Author:0x1018e3558 ...>}>, #<Book:0x1018e3620 @values={:title=>"bar", :id=>5, :author=>#<Author:0x1018e3558 ...>}>, #<Book:0x1018e35a8 @values={:title=>"baz", :id=>6, :author=>#<Author:0x1018e3558 ...>}>], :id=>125}>
+
+You can also update the list of books:
+
+    > author.books[0] = Book.new(:title => 'Replaced with a new child object')
+    > author.books[1].title = 'Updated an existing child object'
+    > author.books.delete_at(2) # Removed a child object
+    > author_repo.store(author)
+    ...
+    DELETE FROM `books` WHERE (`id` = 4)
+    DELETE FROM `books` WHERE (`id` = 6)
+    INSERT INTO `books` (`title`, `author_id`) VALUES ('Replaced with a new child object', 125)
+    UPDATE `books` SET `title` = 'Updated an existing child object', `author_id` = 125 WHERE (`id` = 5)
+    ...
+
+Note what happened here:
+
+- Books which were in the author's list of books prior to the update, but aren't in the new list, get deleted
+- New books which weren't in the author's list of books prior to the update, but are in the new list, get inserted with the relevant author set on them
+- Books which were present in the old list, and are also present in the new list potentially with updated properties, get updated. This is based on their identity, ie their having the same ID as before, and ensures that we don't gratuitiously delete and re-create child objects when updating the list en masse like this. Which in turn is desireable so as to avoid a bunch of ON DELETE CASCADE happening unnecessarily.
+
+One thing which *won't* work, is trying to add a book by one author into the books collection of another author. It doesn't support 'stealing' a child object off some other parent object in this way, the desired semantics there are slightly murky and to do so raises some fiddly issues about what callbacks might need to run on the other author from which a book has been stolen, how does the ordering get updated if the books are in an ordered list, and so on, which I was keen to avoid.
+
+Note that this approach very much treats the books as wholly-owned subobjects of the author. Only one author can own a particular book, and if that book is removed from the author's books list, it's removed full stop.
+
+`map_one_to_many` also supports an ordering on these collections via an :order_property argument. At present you need to have this 'order property' on the model class of the child objects; it's an integer representing the position of that child object in the array. If you're only using map_one_to_many in a read-only fashion, then you can use pretty much whichever values you like for the order column, it will just get added in an ORDER BY clause. For a writeable map_one_to_many though, the order property should be an integer index, starting at zero and with no gaps; it is managed for you though when writing. An example:
+
+    Book = LazyData::StructWithIdentity(:title, :author, :position)
+
+    # in AuthorRepository:
+    map_one_to_many :books, :model_class => Book, :property => :author, :order_property => :position, :writeable => true
+
+    # in BookRepository:
+    map_foreign_key :author, :model_class => Author
+    map_column :position
+
+If you try the example above, you'll see it automatically populates this order property when saving the new book objects:
+
+    INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('foo', 126, 0)
+    INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('bar', 126, 1)
+    INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('baz', 126, 2)
+
+If you *do* pre-populate the values for the order property though, then it will be expected to match the ordering that the objects are given in.
+
+When selecting the property it'll add an ORDER BY, so you'll get them back in the same order:
+
+    SELECT `books`.`title` AS `books_title`, `books`.`position` AS `books_position`, `books`.`author_id` AS `books_author_id`, `books`.`id` AS `id` FROM `books` WHERE (`books`.`author_id` = 126) ORDER BY (`books`.`position`)
 
 ### map_many_to_many
 
