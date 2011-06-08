@@ -12,13 +12,13 @@ This is a substantially different approach to the 'Active Record' pattern (http:
 Of course there are various trade-offs involved when choosing between these two approaches. ActiveRecord is a more lightweight approach which is often preferred for small-to-mid-sized database-backed web applications where the data model is tightly coupled to a database schema; whereas Repositories start to show benefits when it comes to, eg:
 
 * Separation of concerns in a larger system; avoiding bloated model classes with too many responsibilities
-* Ease of switching between alternative back-end data stores, eg database-backed vs in-memory; in particular, in order to avoid database dependencies when testing
+* Ease of switching between alternative back-end data stores, eg database-backed vs persisted-in-a-config-file vs persisted in-memory. In particular, this can help avoid database dependencies when testing
 * Systems which persist objects in multiple data stores -- eg in a relational database, serialized in a key-value cache, serialized in config files, ...
 * Decoupling the structure of your data model from the schema of the data store used to persist it
 
 ## Interfaces
 
-At the core of our approach is to define interfaces for the most common kinds of "things which persist stuff". It being Ruby, you could just implement them just via duck-typing, but we also define some modules which serve to illustrate the method signatures, and provide a handful of default implementations and conveniences around the core interface.
+At the core of our approach is to define interfaces for the most common kinds of "things which persist stuff". It being Ruby, you could just implement them just via duck-typing, but we also define some modules which serve to illustrate the method signatures, and provide a handful of default implementations and conveniences around the core interface, and as a 'marker' for the interface (since in general, `duck.is_a?(Quacker)` is easier than `[:quack_loudly, :quack_quietly, ...].each {|m| duck.respond_to?(m)}`).
 
 (We also have some shared test suites which are intended to validate that a particular implementation complies with the contract; a TODO is to make these reusable outside this gem).
 
@@ -44,7 +44,7 @@ This is pretty much the simplest persistence interface possible. It represents a
 
 Cells may optionally support being in an 'empty' state, ie a state where no data is stored in them. They should then also respond to 'clear' to clear out the call, and 'empty?' to determine whether or not the cell has anything stored in it.
 
-Where desired, this may be used to draw a distinction between "set to nil" / "known to be nil" and "not defined" / "not known".
+This allows distinctions to be drawn between eg "present in the hash but set to nil" and "not present in the hash", or "loaded and known to be nil" vs "not loaded", which are quite common distinctions to be found in data structures used for persistence.
 
 ### Persistence::ObjectCell
 
@@ -167,23 +167,92 @@ Note that a database connection is *not* required in order to declare one of the
      => #<Author:0x1018f4b28 @values={:title=>"Joe Bloggs", :id=>1}>
 
     > author_repo.delete(author)
-    DELETE FROM `authors` WHERE (`id` = 2)
+    DELETE FROM `authors` WHERE (`id` = 1)
      => nil
 
+IdentitySetRepositories also support the more general 'store' method from the SetRepository interface - which in the context means, if it's not already persisted, insert it, otherwise update it:
 
-### Database-supplied ID sequences
+    > author = Author.new(:id => 123, :title => 'Test')
+    > author_repo.store(author)
+    SELECT 1 FROM `authors` WHERE (`id` = 123) LIMIT 1
+    INSERT INTO `authors` (`title`, `id`) VALUES ('Test', 123)
+     => #<Author:0x1018c8578 @values={:title=>"Test", :id=>123}>
 
-### Lazy loading with LazyData::Struct model classes
+    > author.title = "Changed"
+     => "Changed"
+    > author_repo.store(author)
+    SELECT 1 FROM `authors` WHERE (`id` = 123) LIMIT 1
+    UPDATE `authors` SET `title` = 'Changed' WHERE (`id` = 123)
+
+Where it does an extra query first to figure out if the object is already persisted. (If you're wondering why it doesn't just do a `REPLACE INTO`, then the ruby code wouldn't know ahead of time if it's inserting or updating, which makes it harder to fire pre_insert/pre_update hooks and for the created_at/updated_at property mappers to work).
+
+Note that this is not the preferred way to do things if you actually know what you want. If you want an insert, prefer `store_new`, if you want to update, prefer `update`.
+
+With `store`, it doesn't keep a track of which properties have changed, so if the object is already in the database, it'll update all its defined properties. In general, this approach:
+
+    @repo.update(object, :property => 'new_value')
+
+is preferable to this one, which may be more familiar to ActiveRecord users:
+
+    object.property = 'new_value'
+    @repo.store(object)
+
+The advantage being that in the former case, the new property will only get set on the in-memory object if the update succeeds, and the repo will only update the specified properties not all of them.
+
+The other thing is the approach taken in the latter example may not scale up to more complex scenarios, where you expect to make a bunch of changes to an in-memory object graph and then persist them all in one go with 'store'. There is some support for this in the one_to_many, many_to_many etc mappers, but the general case is quite hard, and you really need a full-on Unit Of Work pattern to do a rigorous job of it where it guarantees to persist all changes to an object graph in the right order. So for now if you encounter problems along these lines, eg with callbacks not running in the right order, take it as a sign that you may just need to be more fine-grained and explicit in the way you're updating your subobjects. Better take on this deffo part of the longer-term TODO.
+
+Note, you can also use a model object or other hash-like thing as an update, in which case it will update any properties which are defined and present (has_key?) on the update model:
+
+    > update = Author.new(:fave_breakfast_cereal => 'Shreddies')
+    > author_repo.update(author, update)
+    UPDATE `authors` SET `fave_breakfast_cereal` = 'Shreddies' WHERE (`id` = 123)
+     => #<Author:0x1018c8578 @values={:title=>"Changed", :fave_breakfast_cereal=>"Shreddies", :id=>123}>
+
+Note: one case where `store` may be preferable is if you have `:id_sequence => false`, ie you generate the primary keys in your code, and you want to do an 'upsert' against a particular primary key.
+
+### Property mappers
+
+Persistence::Sequel::IdentitySetRepository is designed to be quite extensible in the way it maps different properties of the objects it persists. The property mapper used in the example above is Persistence::Sequel::PropertyMapper::Column (`map_column :foo` is just shorthand for `map_property :foo, Persistence::Sequel::PropertyMapper::Column`), but there are various other property mappers available as we'll see, and it's possible to write your own too.
+
+To summarize the mechanics of it: a repository has a PropertyMapper instance for each property it maps, this is a single static instance which doesn't have any mutable state. The repository calls upon the property mapper at various points during CRUD operations, passing it the relevant model instance. This allows you to hook into the repository internals at various stages in order to implement different behaviours for how a property is CRUDed.
+
+In particular, the property mapper has the opportunity to:
+
+- Specify particular Sequel expressions (with aliases) to add into the SELECT clause of the main query being done to load an object, when this property is to be loaded
+- Specify which tables which need to be added into the FROM clause of this query in order for the above SELECT clause to work (although they need to be tables which the repository knows about, and the repository takes care of JOINing them. See the section on using multiple tables for more info, and note that this doesn't at present work for adding arbitrary eager-association-loading joins into a query, only for when the object being loaded is spread across multiple tables in a one-to-one fashion)
+- To load the value for this property for a particular object ID, given the sequel result row resulting from the above SELECT query (note it doesn't have to get the value from this query and its result row, it could for example do its own separate query if required eg to load associated objects).
+- Given a list of IDs and a list of result rows, to do the above in an efficient batched fashion. This provides a basic way to avoid the classic 'n+1' problem, eg the foreign key mapper uses this to do a `WHERE id IN (1,2,3,...)`
+- To do something relevant to this property {pre,post}_{insert,update,delete} of its parent object
+- Make a Sequel filter expression which can be used to build a query querying for a particular value of this property
+
+When creating property mappers via the `map_*` class methods, you can generally specify a bunch of options to customize exactly which database columns, tables etc they use. Some examples follow.
+
+### map_column
+
+### map_created_at and map_updated_at
+
+### map_foreign_key
+
+### map_one_to_many
+
+### map_many_to_many
+
+### map_custom_query and custom_query_single_value
+
+### map_hash_property and map_array_property
+
+
+### Lazy loading of properties using LazyData::Struct
 
 One of the downsides of decoupling data model classes from persistence concerns is that, because the model objects have no connection with the data source they came from, you may have to go back to the repository if you want to load additional properties or associations on them. This means that you end up worrying too much about exactly which properties to fetch eagerly at which point in order to ensure the right things are loaded.
 
 There's a solution to this though, which is if you use a model class which supports lazily-evaluated properties. THe model instance doesn't need to know anything about the details of the data store it's fetched from -- the repository just supplies properties to the constructor in the form of a block which can be called lazily to load them, rather than as an actual hash of values.
 
-As it stands, you'll need to make your model class a subclass of LazyData::Struct (from the lazy-data gem) in order to take advantage of this. In fact, at present we kinda assume that you're using LazyData::Struct in general; a TODO is to remove the dependency on this, which shouldn't be too hard to do but hasn't been a priority yet.
+For comparison, this is somewhat analagous to how Hash works in the ruby stdlib. You can construct it with a block which lazily loads missing keys: `Hash.new {|hash, key| hash[key] = load(key)}`
+
+As it stands, you need to make your model class a subclass of LazyData::Struct (from the lazy-data gem) in order to take advantage of this, and this is the main reason for the current somewhat-loose dependency on lazy-data. A TODO is to do the remaining work to properly remove the dependency on this so you can use your own model class whether or not it supports lazy-loaded properties -- or maybe even just use Hash if you prefer.
 
 ### Control over which properties get loaded eagerly
-
-### Mapping associations between different persisted model classes
 
 ### Wiring up repositories so they can load associations
 
@@ -192,6 +261,8 @@ When you start decoupling things like repositories from the model classes, it be
 You can wire them up yourself if you want, but Persistence::Sequel also supports the use of Wirer, a dependency injection library, to wire up repositories. It's recommended to use this if the data model you're persisting has more than a handful of inter-related object types, as it would be quite a pain to do it manually. If you choose to use Wirer you'll find that subclasses of Persistence::Sequel::IdentitySetRepository automatically expose the Wirer::Factory::Interface required for them to be added into a container and hooked up with their dependencies.
 
 ### Extensible PropertyMapper interface
+
+### Using multiple tables / mapping different properties to different tables
 
 ### Class-table and single-table inheritance mapping
 
@@ -206,10 +277,14 @@ You can wire them up yourself if you want, but Persistence::Sequel also supports
 In no particular order:
 
 - Chaining repositories, so you can put a Serialized cache repository infront of a Sequel repository in order to cache certain serialized versions of objects before hitting the database, with options for whether to write_on_miss etc.
-  - Formalising an interface which allows you to specify which 'version' of an object you want to fetch, eg you might fetch full or partial versions. Lazy loading makes this less necessary, *but* it is going to be more useful when it comes to loading objects from a serialized cache
+  - Formalising an interface which allows you to specify which 'version' of an object you want to fetch, eg you might fetch full or partial versions, just certain properties etc. Lazy loading makes this less necessary, *but* it is going to be more useful when it comes to storing and loading objects from a serialized cache.
 - Overall tidyup of (and better test coverage for) the Sequel code
-- Some performance optimisations for Sequel repositories, in particular to the way lazy loading works
+- Some performance optimisations for Sequel repositories, in particular to the way lazy loading works, and avoiding unnecessary queries when traversing an object graph.
 - Formalising some concept of the schema of ruby objects which repositories are designed to persist
 - Database-backed implementations of other simpler Persistence interfaces like HashRepository, SetRepository and ArrayCell
 - Support for Identity Map and Unit of Work patterns (a biggie)
 - Implementations of the Persistence interfaces for some NoSQL datastores (eg Redis would be nice)
+- Porting across some more featureful and robust disk-backed implementations of the repository interfaces, making it a no-brainer to use config-file-backed persistence
+- Proper support for the use of non-Sequel repositories together with foreign_key mappers, so eg you could have it load a licensor from a licensor config file based on a licensor_id column in the database. The property mappers were designed with this sort of capability in mind but a bit more work needs doing on it.
+- Perhaps extend the property mapper concept to non-sequel-backed repositories too; in the process seeing if more could be done to unify the way property mappers work with the way repositories expose object cells, and object cells expose property cells.
+- Better-thought-out support in the persistence interfaces for reflection to discover the types of objects which can be persisted in a particular cell/repository/etc. This has been done to an extent but was a bit of a rush job. Perhaps would be nice to implement this via optional support for some kind of schema library. A good approach to this might also help to pin down in a tidy precise way how repositories ought to behave in the presence of polymorphism and subclassing.
