@@ -111,6 +111,7 @@ For this I'll use the following schema:
     create table influenced_by (
       author_id int not null,
       book_id int not null,
+      position int not null,
       primary key (author_id, book_id),
       foreign key (author_id) references authors (id),
       foreign key (book_id) references books (id)
@@ -422,6 +423,82 @@ When selecting the property it'll add an ORDER BY, so you'll get them back in th
     SELECT `books`.`title` AS `books_title`, `books`.`position` AS `books_position`, `books`.`author_id` AS `books_author_id`, `books`.`id` AS `id` FROM `books` WHERE (`books`.`author_id` = 126) ORDER BY (`books`.`position`)
 
 ### map_many_to_many
+
+This is the classic many_to_many which uses rows in a 'join table' with two foreign keys, to store the relationships in a many-to-many association.
+
+In our example (which is now growing slightly contrived) I'm going to have a many-to-many relationship where Authors can be 'influenced by' a set of Books:
+
+    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal, :books, :influenced_by_books)
+    Book = LazyData::StructWithIdentity(:title, :author, :position, :influenced_authors)
+
+    # in AuthorRepository
+    map_many_to_many(:influenced_by_books,
+      :model_class => Book,
+      :join_table  => :influenced_by,
+      :left_key    => :author_id,
+      :right_key   => :book_id,
+      :writeable   => true
+    )
+
+    # in BookRepository
+    map_many_to_many(:influenced_authors,
+      :model_class => Author,
+      :join_table  => :influenced_by,
+      :left_key    => :book_id,
+      :right_key   => :author_id
+    )
+
+    # after construction these will need wiring up too
+    author_repo.mapper(:influenced_by_books).target_repo = book_repo
+    book_repo.mapper(:influenced_authors).target_repo = author_repo
+
+The options here are:
+
+- `:join_table`, the table which stores the foreign key association pairs. Defaults to :"#{repo.main_table}_#{property_name}"
+- `:left_key`, the foreign key column on this table pointing at the object on which the property lives. Defaults to :"#{repo.main_table.to_s.singularize}_id"
+- `:right_key`, the foreign key column on this table pointing at the associated object. Defaults to :"#{property_name.to_s.singularize}_id"
+- `:writeable`, as with the one_to_many mapper, if you want to be able to write to these mapped properties you need to explicitly turn this on
+
+If you now use this:
+
+    > all_books = book_repo.get_all
+    > author = Author.new(:title => 'Widely read', :influenced_by_books => all_books)
+    > author_repo.store_new(author)
+    INSERT INTO `authors` (`title`) VALUES ('Widely read')
+    INSERT INTO `influenced_by` (`author_id`, `book_id`) VALUES (128, 1), (128, 2), (128, 3), (128, 5), (128, 7), (128, 8), (128, 9), (128, 10)
+
+    > author_repo.update(author, :influenced_by_books => all_books[0..2])
+    DELETE FROM `influenced_by` WHERE (`author_id` = 128)
+    INSERT INTO `influenced_by` (`author_id`, `book_id`) VALUES (128, 1), (128, 2), (128, 3)
+
+Some notes:
+
+If you use this in a read-only fashion, you can use pretty much any table you like as a join table, even potentially tables that are also used for other purposes.
+
+If you make it writeable, though, the rows in the join table are then treated as wholly owned part of the parent object on which the writeable many_to_many property lives. They will be deleted and re-inserted whenever you update the property, as you can see above.
+
+If you have a corresponding many_to_many property on the other ends of the association, note that these updates may affect the values of the corresponding property on objects on the other end of the association. At present, there's no support for notifying these affected objects that they were affected by the change, via post_update callbacks or anything.
+
+Normally you would only make one of the two corresponding many_to_many associations writeable, although you can make both of them writeable, if you have an order column on the join table, updating it from the other end can disturb the sequence of the order column values, so this isn't recommended.
+
+If you specify an :order_column, you can make it an ordered list, although note that if you're mapping the association via many_to_many properties on both ends, this order can obviously only apply on one end. In our case we'll make it the order of books within the 'influenced_by_books' list for an author:
+
+    map_many_to_many(:influenced_by_books,
+      :model_class  => Book,
+      :join_table   => :influenced_by,
+      :left_key     => :author_id,
+      :right_key    => :book_id,
+      :order_column => :position,
+      :writeable    => true
+    )
+
+Then you'll find the example above does, eg:
+
+    INSERT INTO `influenced_by` (`author_id`, `book_id`, `position`) VALUES (129, 1, 0), (129, 2, 1), (129, 3, 2), (129, 5, 3), (129, 7, 4), (129, 8, 5), (129, 9, 6), (129, 10, 7)
+
+and
+
+    SELECT `books`.`title` AS `books_title`, `books`.`id` AS `id`, `books`.`position` AS `books_position` FROM `books` INNER JOIN `influenced_by` ON (`influenced_by`.`book_id` = `books`.`id`) WHERE (`influenced_by`.`author_id` = 129) ORDER BY `influenced_by`.`position`
 
 ### map_custom_query and custom_query_single_value
 
