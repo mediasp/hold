@@ -124,6 +124,24 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     end
   end
 
+  describe "map_transformed_column", self do
+    it "should work like map_column but apply custom to_sequel and from_sequel transformations when translating values to and from something which can be put in a db column via sequel" do
+      @db = Sequel.sqlite
+      @db.create_table(:test_table) do
+        primary_key :id
+        varchar :foo, :null => false
+      end
+      @model_class = LazyData::StructWithIdentity(:foo)
+      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
+        map_transformed_column :foo, :to_sequel => proc {|v| v.join(",")}, :from_sequel => proc {|v| v.split(",")}
+      end.new(@db)
+      entity = @model_class.new(:foo => ['a','b','c'])
+      repo.store(entity)
+      assert_equal 'a,b,c', @db[:test_table].select(:foo).filter(:id => entity.id).single_value
+      assert_equal ['a','b','c'], repo.get_by_id(entity.id).foo
+    end
+  end
+
   describe "map_created_at / map_updated_at", self do
     def setup
       @db = Sequel.sqlite

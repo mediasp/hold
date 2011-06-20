@@ -86,6 +86,7 @@ module Persistence::Sequel
         :one_to_many   => 'OneToMany',   :many_to_many     => 'ManyToMany',
         :created_at    => 'CreatedAt',   :updated_at       => 'UpdatedAt',
         :hash_property => 'Hash',        :array_property   => 'Array',
+        :transformed_column => 'TransformedColumn',
         :custom_query  => 'CustomQuery', :custom_query_single_value => 'CustomQuerySingleValue'
       }.each do |name, mapper_class|
         class_eval <<-EOS, __FILE__, __LINE__+1
