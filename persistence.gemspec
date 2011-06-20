@@ -21,5 +21,5 @@ spec = Gem::Specification.new do |s|
   s.add_dependency('wirer', '~> 0.4.0')
   s.add_dependency('lazy-data', '~> 0.1.0')
 
-  s.files = Dir.glob("{lib}/**/*") + ['README.txt']
+  s.files = Dir.glob("{lib}/**/*") + ['README.md']
 end
