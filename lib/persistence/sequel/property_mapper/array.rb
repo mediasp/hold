@@ -38,7 +38,7 @@ module Persistence::Sequel
       array = entity[@property_name] or return
       insert_rows = []
       array.each_with_index do |v,i|
-        row = {@foreign_key => last_insert_id, @value_column => v}
+        row = {@foreign_key => entity.id || last_insert_id, @value_column => v}
         row[@order_column] = i if @order_column
         insert_rows << row
       end
