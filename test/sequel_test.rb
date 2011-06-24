@@ -48,7 +48,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     assert_equal ['x','x'], [xxyy[1].abc, xxyy[1].def]
   end
 
-  it "should allow you to specify which properties to load eagerly, with the model returned able to lazily fetch the rest on demand (when LazyData::Struct subclass used for the model)" do
+  it "should allow you to specify which properties to load eagerly, with the model returned able to lazily fetch the rest on demand (when ThinModels::Struct subclass used for the model)" do
     entity = make_entity(:abc => 'abc', :def => 'def')
     @repository.store_new(entity)
     id = entity.id
@@ -74,7 +74,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         primary_key :id
         varchar :string, :null => false
       end
-      @model_class = LazyData::StructWithIdentity(:string)
+      @model_class = ThinModels::StructWithIdentity(:string)
       repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {map_column :string}.new(@db)
       entity = @model_class.new(:string => 'foo')
       repo.store(entity)
@@ -88,7 +88,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         primary_key :id
         varchar :string_column_with_particular_name, :null => false
       end
-      @model_class = LazyData::StructWithIdentity(:string)
+      @model_class = ThinModels::StructWithIdentity(:string)
       repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_column :string, :column_name => :string_column_with_particular_name
       end.new(@db)
@@ -106,7 +106,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         datetime :datetime
         float :float
       end
-      @model_class = LazyData::StructWithIdentity(:integer, :datetime, :float)
+      @model_class = ThinModels::StructWithIdentity(:integer, :datetime, :float)
       repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_column :integer; map_column :datetime; map_column :float
       end.new(@db)
@@ -131,7 +131,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         primary_key :id
         varchar :foo, :null => false
       end
-      @model_class = LazyData::StructWithIdentity(:foo)
+      @model_class = ThinModels::StructWithIdentity(:foo)
       repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_transformed_column :foo, :to_sequel => proc {|v| v.join(",")}, :from_sequel => proc {|v| v.split(",")}
       end.new(@db)
@@ -150,7 +150,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         datetime :created_at, :null => false
         datetime :updated_at, :null => false
       end
-      @model_class = LazyData::StructWithIdentity(:created_at, :updated_at)
+      @model_class = ThinModels::StructWithIdentity(:created_at, :updated_at)
       @repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
         # the args here can all actually be left out as they're the defaults, but to demonstrate:
         map_created_at :created_at
@@ -197,8 +197,8 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         primary_key :id
         integer :bar_id
       end
-      bar_model_class = @bar_model_class = LazyData::StructWithIdentity(:string)
-      @foo_model_class = LazyData::StructWithIdentity(:bar)
+      bar_model_class = @bar_model_class = ThinModels::StructWithIdentity(:string)
+      @foo_model_class = ThinModels::StructWithIdentity(:bar)
       bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
         map_column :string
       end.new(@db)
@@ -265,8 +265,8 @@ describe "Persistence::Sequel::IdentitySetRepository" do
   end
 
   describe "map_one_to_many", self do
-    Bar = LazyData::StructWithIdentity(:foos)
-    Foo = LazyData::StructWithIdentity(:bar)
+    Bar = ThinModels::StructWithIdentity(:foos)
+    Foo = ThinModels::StructWithIdentity(:bar)
 
     def setup
       @db = Sequel.sqlite
@@ -277,8 +277,8 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         primary_key :id
         integer :bar_id
       end
-      bar_model_class = @bar_model_class = Bar #LazyData::StructWithIdentity(:foos)
-      foo_model_class = @foo_model_class = Foo #LazyData::StructWithIdentity(:bar)
+      bar_model_class = @bar_model_class = Bar #ThinModels::StructWithIdentity(:foos)
+      foo_model_class = @foo_model_class = Foo #ThinModels::StructWithIdentity(:bar)
       foo_repo = 123
       bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
         map_one_to_many :foos, :model_class => foo_model_class, :property => :bar
@@ -429,14 +429,14 @@ describe "Persistence::Sequel::IdentitySetRepository" do
         integer :base_id
         varchar :def, :null => true
       end
-      the_baseclass = @baseclass = Class.new(LazyData::Struct) do
+      the_baseclass = @baseclass = Class.new(ThinModels::Struct) do
         def self.to_s; 'baseclass'; end
-        identity_attr
-        lazy_attr_accessor :abc
+        identity_attribute
+        attribute :abc
       end
       the_subclass = @subclass = Class.new(@baseclass) do
         def self.to_s; 'subclass'; end
-        lazy_attr_accessor :def
+        attribute :def
       end
 
       @baseclass_repo_class = Class.new(Persistence::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do

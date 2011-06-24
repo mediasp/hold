@@ -1,4 +1,4 @@
-require 'lazy_data/array'
+require 'thin_models/lazy_array'
 
 module Persistence
   class Error < ::RuntimeError; end
@@ -83,7 +83,7 @@ module Persistence
       value = get() and value.length
     end
 
-    # returns an instance of LazyData::Array which lazily computes slices and length
+    # returns an instance of ThinModels::LazyArray which lazily computes slices and length
     # based on the get_length and get_slice methods you define.
     def get_lazy_array
       LazyArray.new(self)
@@ -96,7 +96,7 @@ module Persistence
     def can_get_item_class?(klass); true; end
     def can_set_item_class?(klass); true; end
 
-    class LazyArray < LazyData::Array::Memoized
+    class LazyArray < ThinModels::LazyArray::Memoized
       def initialize(array_cell)
         @array_cell = array_cell
       end

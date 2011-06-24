@@ -121,7 +121,7 @@ For this I'll use the following schema:
 
 There is a class-based DSL which is used to configure a new repository class. The simplest example would be:
 
-    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal)
+    Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal)
 
     class AuthorRepository < Persistence::Sequel::IdentitySetRepository
       set_model_class Author
@@ -132,9 +132,9 @@ There is a class-based DSL which is used to configure a new repository class. Th
 
 About the model class:
 
-- There is a basic protocol which your model class needs to observe, in order to work here, so the repository can create, update and read the properties off model instances. For now, the only officially-supported model classes are subclasses of LazyData::Struct from the lazy_data gem, and it's best to look at this for reference. High on the TODO list though is to make it clear exactly what interface you need to support, and to test against some different model class implementations. There's certainly nothing in principle stopping it working with a very basic lightweight plain-old-ruby model class; in fact LazyData pretty much is just one of these, plus some small conveniences (including support for lazy property loading).
+- There is a basic protocol which your model class needs to observe, in order to work here, so the repository can create, update and read the properties off model instances. For now, the only officially-supported model classes are subclasses of ThinModels::Struct from the thin_models gem, and it's best to look at this for reference. High on the TODO list though is to make it clear exactly what interface you need to support, and to test against some different model class implementations. There's certainly nothing in principle stopping it working with a very basic lightweight plain-old-ruby model class; in fact LazyData pretty much is just one of these, plus some small conveniences (including support for lazy property loading).
 
-- The model class is also required to have an attribute called 'id', and to implement the :==/:eql/:hash contract based on this id property. LazyData::StructWithIdentity is the best way of achieving this at present.
+- The model class is also required to have an attribute called 'id', and to implement the :==/:eql/:hash contract based on this id property. ThinModels::StructWithIdentity is the best way of achieving this at present.
 
 About the table:
 
@@ -264,7 +264,7 @@ The actual associated repository only needs to be passed in at initialization ti
 
 An example is in order (continuing on from our examples the AuthorRepository above):
 
-    Book = LazyData::StructWithIdentity(:title, :author)
+    Book = ThinModels::StructWithIdentity(:title, :author)
 
     class BookRepository < Persistence::Sequel::IdentitySetRepository
       set_model_class Book
@@ -324,7 +324,7 @@ But the referenced object isn't treated as some kind of aggregate sub-object whi
 
 This is for classic one to many associations, like one Author has many Books. To demo this, let's revisit the AuthorRepository:
 
-    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal, :books)
+    Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal, :books)
 
     class AuthorRepository < Persistence::Sequel::IdentitySetRepository
       # ...
@@ -401,7 +401,7 @@ Note that this approach very much treats the books as wholly-owned subobjects of
 
 `map_one_to_many` also supports an ordering on these collections via an :order_property argument. At present you need to have this 'order property' on the model class of the child objects; it's an integer representing the position of that child object in the array. If you're only using map_one_to_many in a read-only fashion, then you can use pretty much whichever values you like for the order column, it will just get added in an ORDER BY clause. For a writeable map_one_to_many though, the order property should be an integer index, starting at zero and with no gaps; it is managed for you though when writing. An example:
 
-    Book = LazyData::StructWithIdentity(:title, :author, :position)
+    Book = ThinModels::StructWithIdentity(:title, :author, :position)
 
     # in AuthorRepository:
     map_one_to_many :books, :model_class => Book, :property => :author, :order_property => :position, :writeable => true
@@ -428,8 +428,8 @@ This is the classic many_to_many which uses rows in a 'join table' with two fore
 
 In our example (which is now growing slightly contrived) I'm going to have a many-to-many relationship where Authors can be 'influenced by' a set of Books:
 
-    Author = LazyData::StructWithIdentity(:title, :fave_breakfast_cereal, :books, :influenced_by_books)
-    Book = LazyData::StructWithIdentity(:title, :author, :position, :influenced_authors)
+    Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal, :books, :influenced_by_books)
+    Book = ThinModels::StructWithIdentity(:title, :author, :position, :influenced_authors)
 
     # in AuthorRepository
     map_many_to_many(:influenced_by_books,
@@ -505,7 +505,7 @@ and
 ### map_hash_property and map_array_property
 
 
-### Lazy loading of properties using LazyData::Struct
+### Lazy loading of properties using ThinModels::Struct
 
 One of the downsides of decoupling data model classes from persistence concerns is that, because the model objects have no connection with the data source they came from, you may have to go back to the repository if you want to load additional properties or associations on them. This means that you end up worrying too much about exactly which properties to fetch eagerly at which point in order to ensure the right things are loaded.
 
@@ -513,7 +513,7 @@ There's a solution to this though, which is if you use a model class which suppo
 
 For comparison, this is somewhat analagous to how Hash works in the ruby stdlib. You can construct it with a block which lazily loads missing keys: `Hash.new {|hash, key| hash[key] = load(key)}`
 
-As it stands, you need to make your model class a subclass of LazyData::Struct (from the lazy-data gem) in order to take advantage of this, and this is the main reason for the current somewhat-loose dependency on lazy-data. A TODO is to do the remaining work to properly remove the dependency on this so you can use your own model class whether or not it supports lazy-loaded properties -- or maybe even just use Hash if you prefer.
+As it stands, you need to make your model class a subclass of ThinModels::Struct (from the thin_models gem) in order to take advantage of this, and this is the main reason for the current somewhat-loose dependency on thin_models. A TODO is to do the remaining work to properly remove the dependency on this so you can use your own model class whether or not it supports lazy-loaded properties -- or maybe even just use Hash if you prefer.
 
 ### Control over which properties get loaded eagerly
 

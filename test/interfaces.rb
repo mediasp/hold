@@ -1,6 +1,6 @@
 require 'test/helpers'
 require 'persistence/interfaces'
-require 'lazy_data/struct'
+require 'thin_models/struct/identity'
 
 module PersistenceTestHelpers
   def void_where_unsupported
@@ -358,7 +358,7 @@ describe_shared "Persistence::SetRepository" do
   end
 end
 
-AbcDef = LazyData::StructWithIdentity(:abc, :def)
+AbcDef = ThinModels::StructWithIdentity(:abc, :def)
 
 describe_shared "Persistence::IdentitySetRepository" do
   behaves_like "Persistence::SetRepository"

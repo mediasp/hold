@@ -1,6 +1,6 @@
 module Persistence::Sequel
-  # For returning LazyData::Array instances based off a Sequel dataset:
-  class DatasetLazyArray < LazyData::Array::MemoizedLength
+  # For returning ThinModels::LazyArray instances based off a Sequel dataset:
+  class DatasetLazyArray < ThinModels::LazyArray::MemoizedLength
     def initialize(dataset, count_dataset=nil, &block)
       @dataset = dataset
       @count_dataset = count_dataset || @dataset
