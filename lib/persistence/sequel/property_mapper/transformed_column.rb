@@ -17,7 +17,7 @@ module Persistence::Sequel
       @from_sequel.call(value)
     end
 
-    def load_value(row, id=nil, version=nil)
+    def load_value(row, id=nil, properties=nil)
       from_sequel(row[@column_alias])
     end
 

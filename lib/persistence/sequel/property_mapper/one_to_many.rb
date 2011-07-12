@@ -60,8 +60,8 @@ module Persistence::Sequel
       end
     end
 
-    def load_value(row, id, version=nil)
-      properties = (version || target_repo.default_properties).merge(@extra_properties)
+    def load_value(row, id, properties=nil)
+      properties = (properties || target_repo.default_properties).merge(@extra_properties)
       target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_id(id, mapping[@foreign_key_property_name])
         dataset = dataset.filter(filter)
@@ -70,8 +70,8 @@ module Persistence::Sequel
       end.to_a
     end
 
-    def load_values(rows, ids=nil, version=nil, &b)
-      properties = (version || target_repo.default_properties).merge(@extra_properties)
+    def load_values(rows, ids=nil, properties=nil, &b)
+      properties = (properties || target_repo.default_properties).merge(@extra_properties)
       query = target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_ids(ids, mapping[@foreign_key_property_name])
         dataset = dataset.

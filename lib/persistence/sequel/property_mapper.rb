@@ -38,7 +38,7 @@ module Persistence::Sequel
     # Where the identity value is available it will also be passed.
     #
     # One or other of id, row must always be passed.
-    def load_value(row=nil, id=nil, version=nil)
+    def load_value(row=nil, id=nil, properties=nil)
     end
 
     # called inside the INSERT transaction for insertion of the given entity.
@@ -103,11 +103,11 @@ module Persistence::Sequel
     # like load_value, but works in a batched fashion, allowing a batched loading strategy to
     # be used for associated objects.
     # takes a block and yields the loaded values one at a time to it together with their index
-    def load_values(rows=nil, ids=nil, version=nil)
+    def load_values(rows=nil, ids=nil, properties=nil)
       if rows
-        rows.each_with_index {|row, i| yield load_value(row, ids && ids[i], version), i}
+        rows.each_with_index {|row, i| yield load_value(row, ids && ids[i], properties), i}
       else
-        ids.each_with_index {|id, i| yield load_value(nil, id, version), i}
+        ids.each_with_index {|id, i| yield load_value(nil, id, properties), i}
       end
     end
 

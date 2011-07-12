@@ -52,38 +52,38 @@ module Persistence::Sequel
     # - Groups the IDs by type and does a separate get_many_by_ids query on the relevant repo
     # - Combines the results from the separate queries putting them into the order of the IDs from
     #   the original rows (or in the order of the ids given, where they are given)
-    def load_from_rows(rows, version=nil, ids=nil)
+    def load_from_rows(rows, options={}, ids=nil)
       ids ||= rows.map {|row| row[:_id]}
       ids_by_type = Hash.new {|h,k| h[k]=[]}
       rows.each {|row| ids_by_type[row[:_type]] << row[:_id]}
       results_by_id = {}
       ids_by_type.each do |type, type_ids|
         repo = type_to_repo_mapping[type] or raise "PolymorphicRepository: no repo found for type value #{type}"
-        repo.get_many_by_ids(type_ids, version).each_with_index do |result, index|
+        repo.get_many_by_ids(type_ids, options).each_with_index do |result, index|
           results_by_id[type_ids[index]] = result
         end
       end
       results_by_id.values_at(*ids)
     end
 
-    def load_from_row(row, version=nil)
+    def load_from_row(row, options={})
       repo = type_to_repo_mapping[row[:_type]] or raise "PolymorphicRepository: no repo found for type value #{row[:_type]}"
-      repo.get_by_id(row[:_id], version)
+      repo.get_by_id(row[:_id], options)
     end
 
-    def get_with_dataset(version=nil, &b)
+    def get_with_dataset(options={}, &b)
       dataset = @dataset
       dataset = yield @dataset if block_given?
-      row = dataset.limit(1).first and load_from_row(row, version)
+      row = dataset.limit(1).first and load_from_row(row, options)
     end
 
-    def get_by_id(id, version=nil)
-      get_with_dataset(version) {|ds| ds.filter(@id_column => id)}
+    def get_by_id(id, options={})
+      get_with_dataset(options) {|ds| ds.filter(@id_column => id)}
     end
 
-    def get_many_by_ids(ids, version=nil)
+    def get_many_by_ids(ids, options={})
       rows = @dataset.filter(@id_column => ids).all
-      load_from_rows(rows, version, ids)
+      load_from_rows(rows, options, ids)
     end
 
     def contains_id?(id)

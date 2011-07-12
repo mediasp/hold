@@ -279,78 +279,59 @@ module Persistence::Sequel
       Query.new(self, properties, &b)
     end
 
-
-    def load_from_rows(rows, properties)
-      return [] if rows.empty?
-
-      property_hashes = []; ids = []
-      @identity_mapper.load_values(rows) do |id,i|
-        property_hashes << {@identity_property => id}
-        ids << id
-      end
-
-      non_id_property_mappings_for_properties(properties).each do |prop_name, mapper, prop_properties|
-        mapper.load_values(rows, ids, prop_properties) {|value, i| property_hashes[i][prop_name] = value}
-      end
-
-      entities = []
-      property_hashes.each_with_index {|h,i| entities << construct_entity(h, rows[i])}
-      entities
-    end
-
     # Can take a block which may add extra conditions, joins, order etc onto the relevant query.
-    def get_many_with_dataset(properties=nil, &b)
-      query(properties, &b).to_a
+    def get_many_with_dataset(options={}, &b)
+      query(options[:properties], &b).to_a(options[:lazy])
     end
 
-    def get_all(properties=nil)
-      query(properties).to_a
+    def get_all(options={})
+      query(options[:properties]).to_a(options[:lazy])
     end
 
     # like get_many_with_dataset but just gets a single row, or nil if not found. adds limit(1) to the dataset for you.
-    def get_with_dataset(properties=nil, &b)
-      query(properties, &b).single_result
+    def get_with_dataset(options={}, &b)
+      query(options[:properties], &b).single_result
     end
 
-    def get_property(entity, property, properties_to_fetch_on_property=nil)
-      result = query(property => properties_to_fetch_on_property) do |dataset, property_columns|
+    def get_property(entity, property, options={})
+      result = query(property => options[:properties]) do |dataset, property_columns|
         filter = @identity_mapper.make_filter(entity.id, property_columns[@identity_property])
         dataset.filter(filter)
       end.single_result
       result && result[property]
     end
 
-    def get_by_id(id, properties=nil)
-      query(properties) do |dataset, property_columns|
+    def get_by_id(id, options={})
+      query(options[:properties]) do |dataset, property_columns|
         filter = @identity_mapper.make_filter(id, property_columns[@identity_property])
         dataset.filter(filter)
       end.single_result
     end
 
     # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
-    def get_many_by_ids(ids, properties=nil)
+    def get_many_by_ids(ids, options={})
       results_by_id = {}
-      results = query(properties) do |ds,mapping|
+      results = query(options[:properties]) do |ds,mapping|
         id_filter = @identity_mapper.make_multi_filter(ids.uniq, mapping[@identity_property])
         ds.filter(id_filter)
-      end.to_a
+      end.to_a(options[:lazy])
       results.each {|object| results_by_id[object.id] = object}
       ids.map {|id| results_by_id[id]}
     end
 
-    def get_many_by_property(property, value, properties_to_fetch=nil)
+    def get_many_by_property(property, value, options={})
       properties_to_fetch ||= @default_properties.dup
       properties_to_fetch[property] = true
-      query(properties_to_fetch) do |dataset, property_columns|
+      query(options[:properties]) do |dataset, property_columns|
         filter = mapper(property).make_filter(value, property_columns[property])
         dataset.filter(filter)
-      end.to_a
+      end.to_a(options[:lazy])
     end
 
-    def get_by_property(property, value, properties_to_fetch=nil)
+    def get_by_property(property, value, options={})
       properties_to_fetch ||= @default_properties.dup
       properties_to_fetch[property] = true
-      query(properties_to_fetch) do |dataset, property_columns|
+      query(options[:properties]) do |dataset, property_columns|
         filter = mapper(property).make_filter(value, property_columns[property])
         dataset.filter(filter)
       end.single_result

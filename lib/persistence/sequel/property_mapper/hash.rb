@@ -17,7 +17,7 @@ module Persistence::Sequel
       @select_all = @repository.db[@table].select(@key_column.as(:key), @value_column.as(:value), @foreign_key.as(:id))
     end
 
-    def load_value(row=nil, id=nil, version=nil)
+    def load_value(row=nil, id=nil, properties=nil)
       result = {}
       @select_kv.filter(@foreign_key => id).each do |row|
         result[row[:key]] = row[:value]
@@ -25,7 +25,7 @@ module Persistence::Sequel
       result
     end
 
-    def load_values(rows=nil, ids=nil, version=nil, &block)
+    def load_values(rows=nil, ids=nil, properties=nil, &block)
       results = Hash.new {|h,k| h[k]={}}
       @select_all.filter(@foreign_key => ids).each do |row|
         results[row[:id]][row[:key]] = row[:value]

@@ -18,11 +18,11 @@ module Persistence::Sequel
       @select_all = @select_all.order(@order_column) if @order_column
     end
 
-    def load_value(row=nil, id=nil, version=nil)
+    def load_value(row=nil, id=nil, properties=nil)
       @select_v.filter(@foreign_key => id).map {|row| row[:value]}
     end
 
-    def load_values(rows=nil, ids=nil, version=nil, &block)
+    def load_values(rows=nil, ids=nil, properties=nil, &block)
       results = Hash.new {|h,k| h[k]=[]}
       @select_all.filter(@foreign_key => ids).each do |row|
         results[row[:id]] << row[:value]

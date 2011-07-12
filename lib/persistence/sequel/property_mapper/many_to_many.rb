@@ -63,8 +63,8 @@ module Persistence::Sequel
       instance_eval(&block) if block
     end
 
-    def load_value(row, id, version=nil)
-      target_repo.query(version) do |dataset, property_columns|
+    def load_value(row, id, properties=nil)
+      target_repo.query(properties) do |dataset, property_columns|
         id_column = property_columns[target_repo.identity_property].first
         dataset = dataset.
           join(@join_table, @qualified_right_key => id_column).
@@ -76,8 +76,8 @@ module Persistence::Sequel
     end
 
     # efficient batch load for the non-lazy case
-    def load_values(rows, ids=nil, version=nil, &b)
-      query = target_repo.query(version) do |dataset, mapping|
+    def load_values(rows, ids=nil, properties=nil, &b)
+      query = target_repo.query(properties) do |dataset, mapping|
         id_column = mapping[target_repo.identity_property]
         dataset = dataset.
           join(@join_table, @qualified_right_key => id_column).

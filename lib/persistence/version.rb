@@ -1,3 +1,3 @@
 module Persistence
-  VERSION = "0.2.6"
+  VERSION = "0.4.0"
 end

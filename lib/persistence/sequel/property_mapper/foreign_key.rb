@@ -32,8 +32,8 @@ module Persistence::Sequel
       @model_class = options[:model_class] or raise ArgumentError
     end
 
-    def load_value(row, id=nil, version=nil)
-      fkey = row[@column_alias] and target_repo.get_by_id(fkey, version)
+    def load_value(row, id=nil, properties=nil)
+      fkey = row[@column_alias] and target_repo.get_by_id(fkey, :properties => properties)
     end
 
     def ensure_value_has_id_where_present(value)
@@ -82,11 +82,11 @@ module Persistence::Sequel
     end
 
     # efficient batch load which takes advantage of get_many_by_ids on the target repo
-    def load_values(rows, ids=nil, version=nil, &b)
+    def load_values(rows, ids=nil, properties=nil, &b)
       fkeys = rows.map {|row| row[@column_alias]}
       non_nil_fkeys = fkeys.compact
       non_nil_fkey_results = if non_nil_fkeys.empty? then [] else
-        target_repo.get_many_by_ids(non_nil_fkeys, version)
+        target_repo.get_many_by_ids(non_nil_fkeys, :properties => properties)
       end
       fkeys.each_with_index do |fkey, index|
         yield(fkey ? non_nil_fkey_results.shift : nil, index)

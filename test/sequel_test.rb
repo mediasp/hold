@@ -53,7 +53,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     @repository.store_new(entity)
     id = entity.id
 
-    entity = @repository.get_by_id(id, [:id])
+    entity = @repository.get_by_id(id, :properties => [:id])
     assert entity.attribute_loaded?(:id)
     assert !entity.attribute_loaded?(:abc)
     assert !entity.attribute_loaded?(:def)
@@ -62,7 +62,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     assert_equal 'def', entity[:def]
     assert entity.attribute_loaded?(:def)
 
-    entity = @repository.get_by_id(id, [:abc])
+    entity = @repository.get_by_id(id, :properties => [:abc])
     assert entity.attribute_loaded?(:abc)
     assert !entity.attribute_loaded?(:def)
   end
@@ -229,7 +229,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
 
       bar_ids = bars.map {|b| b.id}; foo_ids = foos.map {|f| f.id}
       @bar_repo.expects(:get_many_by_ids).with(bar_ids, anything).returns(bars)
-      @foo_repo.get_many_by_ids(foo_ids, {:bar => true})
+      @foo_repo.get_many_by_ids(foo_ids, :properties => {:bar => true})
     end
 
     it "should map nil ok" do
@@ -251,13 +251,13 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     it "should get appropriate version of associated objects taking into account a property version specifying which properties to fetch on it" do
       bar = @bar_model_class.new(:string => 'bar'); @bar_repo.store(bar)
       foo = @foo_model_class.new(:bar => bar); @foo_repo.store(foo)
-      foo1 = @foo_repo.get_by_id(foo.id, [:id])
+      foo1 = @foo_repo.get_by_id(foo.id, :properties => [:id])
       assert !foo1.has_key?(:bar)
-      foo2 = @foo_repo.get_by_id(foo.id, {:bar => [:id]})
+      foo2 = @foo_repo.get_by_id(foo.id, :properties => {:bar => [:id]})
       assert foo2.has_key?(:bar)
       assert_equal bar.id, foo2.bar.id
       assert !foo2.bar.has_key?(:string)
-      foo3 = @foo_repo.get_by_id(foo.id, {:bar => [:id, :string]})
+      foo3 = @foo_repo.get_by_id(foo.id, :properties => {:bar => [:id, :string]})
       assert foo3.has_key?(:bar)
       assert_equal bar.id, foo3.bar.id
       assert_equal 'bar', foo3.bar.string
