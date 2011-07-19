@@ -17,8 +17,12 @@ module Persistence::Sequel
     end
 
     def slice_from_start_and_length(offset, limit)
-      rows = Persistence::Sequel.translate_exceptions do
-        @dataset.limit(limit, offset).all
+      rows = if limit > 0
+        Persistence::Sequel.translate_exceptions do
+          @dataset.limit(limit, offset).all
+        end
+      else
+        []
       end
       # we're supposed to return nil if offset > length of the array,
       # as per Array#slice:
