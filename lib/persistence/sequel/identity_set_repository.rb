@@ -232,7 +232,10 @@ module Persistence::Sequel
     public
 
     def construct_entity(property_hash, row=nil)
-      model_class.new(property_hash) do |model, property|
+      # new_skipping_checks is supported by ThinModels::Struct(::Typed) and skips any type checks or
+      # attribute name checks on the supplied attributes.
+      @model_class_new_method ||= model_class.respond_to?(:new_skipping_checks) ? :new_skipping_checks : :new
+      model_class.send(@model_class_new_method, property_hash) do |model, property|
         get_property(model, property)
       end
     end
