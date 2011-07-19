@@ -19,7 +19,7 @@ spec = Gem::Specification.new do |s|
   s.add_development_dependency('sqlite3')
   s.add_dependency('sequel', '~> 3.11.0')
   s.add_dependency('wirer', '~> 0.4.0')
-  s.add_dependency('thin_models', '~> 0.1.0')
+  s.add_dependency('thin_models', '~> 0.1.4')
 
   s.files = Dir.glob("{lib}/**/*") + ['README.md']
 end
