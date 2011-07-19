@@ -28,7 +28,9 @@ module Persistence::Sequel
       @dataset = @repository.dataset_to_select_tables(*@tables)
       @dataset = yield @dataset, @property_columns if block_given?
 
-      @count_dataset = @dataset
+      id_cols = @property_columns[@repository.identity_property]
+      @count_dataset = @dataset.select(*id_cols)
+
       @dataset = @dataset.select_more(*@aliased_columns)
     end
 
