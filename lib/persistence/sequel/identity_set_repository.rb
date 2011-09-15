@@ -126,10 +126,14 @@ module Persistence::Sequel
       self.class.property_mapper_args.each do |property_name, mapper_class, options, block|
         @property_mappers[property_name] = mapper_class.new(self, property_name, options, &block)
         @default_properties[property_name] = true if mapper_class <= PropertyMapper::Column
+        # for foreign key properties, by default we only load the ID (which is already present on the parent result row):
+        @default_properties[property_name] = JUST_ID if mapper_class <= PropertyMapper::ForeignKey
       end
 
       @property_mappers.freeze
     end
+
+    JUST_ID = [:id].freeze
 
     def inspect
       "<##{self.class}: #{model_class}>"
@@ -237,6 +241,19 @@ module Persistence::Sequel
       end
     end
 
+    def construct_entity_from_id(id)
+      model_class.new(@identity_property => id) do |model, property|
+        get_property(model, property)
+      end
+    end
+
+    # this determines if an optimisation can be done whereby if only the ID property is
+    # requested to be loaded, the object(s) can be constructed directly from their ids
+    # without needing to be fetched from the database.
+    def can_construct_from_id_alone?(properties)
+      properties == JUST_ID
+    end
+
     def dataset_to_select_tables(*tables)
       main_table, *other_tables = tables
       main_id = @identity_mapper.qualified_column_name(main_table)
@@ -321,6 +338,8 @@ module Persistence::Sequel
     end
 
     def get_by_id(id, properties=nil)
+      return construct_entity_from_id(id) if can_construct_from_id_alone?(properties)
+
       query(properties) do |dataset, property_columns|
         filter = @identity_mapper.make_filter(id, property_columns[@identity_property])
         dataset.filter(filter)
@@ -329,6 +348,8 @@ module Persistence::Sequel
 
     # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
     def get_many_by_ids(ids, properties=nil)
+      return ids.map {|id| construct_entity_from_id(id)} if can_construct_from_id_alone?(properties)
+
       results_by_id = {}
       results = query(properties) do |ds,mapping|
         id_filter = @identity_mapper.make_multi_filter(ids.uniq, mapping[@identity_property])

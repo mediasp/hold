@@ -98,7 +98,7 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       assert_equal 'foo', repo.get_by_id(entity.id).string
     end
 
-    it "should roundtrip various value types correctly to and from sql columns" do
+    it "should roundtrip various value types correctly to and from sql columns, loading the relevant properties eagerly" do
       @db = Sequel.sqlite
       @db.create_table(:test_table) do
         primary_key :id
@@ -117,6 +117,9 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       )
       repo.store(entity)
       entity = repo.get_by_id(entity.id)
+      assert entity.has_key?(:integer)
+      assert entity.has_key?(:datetime)
+      assert entity.has_key?(:float)
       assert_equal 123, entity.integer
       assert_instance_of Time, entity.datetime
       assert_equal Time.utc(2000,1,2,12,30), entity.datetime
@@ -261,6 +264,19 @@ describe "Persistence::Sequel::IdentitySetRepository" do
       assert foo3.has_key?(:bar)
       assert_equal bar.id, foo3.bar.id
       assert_equal 'bar', foo3.bar.string
+    end
+
+    it "should be eagerly loaded by default, but only a version consisting of the ID, which is already present on the original result row as a foreign key" do
+      bar = @bar_model_class.new(:string => 'bar'); @bar_repo.store(bar)
+      foo = @foo_model_class.new(:bar => bar); @foo_repo.store(foo)
+
+      # quick if slightly brittle way of checking that no separate sql query is done for 'bar'
+      @bar_repo.expects(:query).never
+
+      foo = @foo_repo.get_by_id(foo.id)
+      assert foo.has_key?(:bar)
+      assert foo.bar.has_key?(:id)
+      assert !foo.bar.has_key?(:string)
     end
   end
 
