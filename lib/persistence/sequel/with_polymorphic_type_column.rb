@@ -72,7 +72,7 @@ module Persistence::Sequel
     # we know the ID, we have to query the db to find out the appropriate class to construct
     # the object as.
     def can_construct_from_id_alone?(properties)
-      super && @restricted_to_types.length == 1
+      super && @restricted_to_types && @restricted_to_types.length == 1
     end
 
     # ensure we select the type column in addition to any columns for mapped properties,
