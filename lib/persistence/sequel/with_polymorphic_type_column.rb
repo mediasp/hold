@@ -71,7 +71,9 @@ module Persistence::Sequel
     # This optimisation has to be turned off for polymorphic repositories, since even if
     # we know the ID, we have to query the db to find out the appropriate class to construct
     # the object as.
-    def can_construct_from_id_alone?(properties); false; end
+    def can_construct_from_id_alone?(properties)
+      super && @restricted_to_types.length == 1
+    end
 
     # ensure we select the type column in addition to any columns for mapped properties,
     # so we know which class to instantiate for each row.
