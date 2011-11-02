@@ -1,6 +1,14 @@
 # Persistence
 
-A ruby library geared towards separating persistence concerns from data model classes. It contains a set of interfaces for and implementations of the Repository pattern (http://martinfowler.com/eaaCatalog/repository.html) in Ruby.
+A ruby library geared towards separating persistence concerns from data model classes.
+
+## TL;DR
+
+https://github.com/playlouder/persistence/blob/master/QUICK-START.md
+
+## An Introduction
+
+The persistence library contains a set of interfaces for, and implementations of, the Repository pattern (http://martinfowler.com/eaaCatalog/repository.html) in Ruby.
 
 To summarize, the idea is that
 
@@ -15,10 +23,6 @@ Of course there are various trade-offs involved when choosing between these two 
 * Ease of switching between alternative back-end data stores, eg database-backed vs persisted-in-a-config-file vs persisted in-memory. In particular, this can help avoid database dependencies when testing
 * Systems which persist objects in multiple data stores -- eg in a relational database, serialized in a key-value cache, serialized in config files, ...
 * Decoupling the structure of your data model from the schema of the data store used to persist it
-
-## TL;DR
-
-https://github.com/playlouder/persistence/wiki/Quick-Start
 
 ## Interfaces
 
