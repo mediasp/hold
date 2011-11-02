@@ -16,6 +16,10 @@ Of course there are various trade-offs involved when choosing between these two 
 * Systems which persist objects in multiple data stores -- eg in a relational database, serialized in a key-value cache, serialized in config files, ...
 * Decoupling the structure of your data model from the schema of the data store used to persist it
 
+## TL;DR
+
+https://github.com/playlouder/persistence/wiki/Quick-Start
+
 ## Interfaces
 
 At the core of our approach is to define interfaces for the most common kinds of "things which persist stuff". It being Ruby, you could just implement them just via duck-typing, but we also define some modules which serve to illustrate the method signatures, and provide a handful of default implementations and conveniences around the core interface, and as a 'marker' for the interface (since in general, `duck.is_a?(Quacker)` is easier than `[:quack_loudly, :quack_quietly, ...].each {|m| duck.respond_to?(m)}`).
