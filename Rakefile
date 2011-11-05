@@ -14,3 +14,13 @@ Rake::TestTask.new do |t|
   t.verbose = true
   t.options = '--runner=specdox'
 end
+
+begin
+  require 'yard'
+  OTHER_PATHS = 'QUICK-START.md README.md'
+  YARD::Rake::YardocTask.new do |t|
+    t.files   = ['lib/**/*.rb', '-', 'QUICK-START.md', 'README.md']
+  end
+rescue NameError
+  $stderr.puts('yard not installed, no yard task defined')
+end
