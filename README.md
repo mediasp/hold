@@ -4,7 +4,7 @@ A ruby library geared towards separating persistence concerns from data model cl
 
 ## TL;DR
 
-https://github.com/playlouder/persistence/blob/master/QUICK-START.md
+If you want to dive in and write some code to get a feel for the library, take a look at the {file:QUICK-START.md}.
 
 ## An Introduction
 
