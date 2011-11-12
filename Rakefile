@@ -21,7 +21,7 @@ begin
   YARD::Rake::YardocTask.new do |t|
     t.files   = ['lib/**/*.rb', '-', 'QUICK-START.md', 'README.md']
   end
-rescue NameError
+rescue LoadError
   $stderr.puts('yard not installed, no yard task defined')
 end
 
