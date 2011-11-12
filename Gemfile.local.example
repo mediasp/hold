@@ -1,0 +1,2 @@
+gem "thin_models", :git => "git://github.com/playlouder/thin_models.git"
+gem "wirer", :git => "git://github.com/playlouder/wirer.git"
