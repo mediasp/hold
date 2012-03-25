@@ -1,6 +1,14 @@
 # Persistence
 
-A ruby library geared towards separating persistence concerns from data model classes. It contains a set of interfaces for and implementations of the Repository pattern (http://martinfowler.com/eaaCatalog/repository.html) in Ruby.
+A ruby library geared towards separating persistence concerns from data model classes.
+
+## TL;DR
+
+If you want to dive in and write some code to get a feel for the library, take a look at the {file:QUICK-START.md}.
+
+## An Introduction
+
+The persistence library contains a set of interfaces for, and implementations of, the Repository pattern (http://martinfowler.com/eaaCatalog/repository.html) in Ruby.
 
 To summarize, the idea is that
 
