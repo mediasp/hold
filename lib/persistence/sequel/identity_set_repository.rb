@@ -167,6 +167,7 @@ module Persistence::Sequel
 
     # convenience to get a particular property mapper of this repo:
     def mapper(name)
+      raise ArgumentError unless name.is_a?(Symbol)
       @property_mappers[name] or raise "#{self.class}: no such property mapper #{name.inspect}"
     end
 
