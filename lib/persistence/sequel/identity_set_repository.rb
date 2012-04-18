@@ -167,7 +167,7 @@ module Persistence::Sequel
 
     # convenience to get a particular property mapper of this repo:
     def mapper(name)
-      @property_mappers[name] or raise "#{self.class}: no such property mapper #{name.inspect}"
+      @property_mappers[name.to_sym] or raise "#{self.class}: no such property mapper #{name.inspect}"
     end
 
     # if you want to avoid the need to manually pass in target_repo parameters for each property
