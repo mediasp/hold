@@ -67,6 +67,49 @@ describe "Persistence::Sequel::IdentitySetRepository" do
     assert !entity.attribute_loaded?(:def)
   end
 
+  it "should raise an ArgumentError when property name passed as a string to get_by_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_raise ArgumentError do
+      @repository.get_by_property("abc", "foo")
+    end
+  end
+
+  it "should accept a property name passed as a symbol to get_by_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_equal entity, @repository.get_by_property(:abc, "foo")
+  end
+
+  it "should raise an ArgumentError when property name passed as a string to get_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_raise ArgumentError do
+      @repository.get_property(entity, "abc", "foo")
+    end
+  end
+
+  it "should accept a property name passed as a symbol to get_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_equal "foo", @repository.get_property(entity, :abc, "foo")
+  end
+
+ it "should raise an ArgumentError when property name passed as a string to get_many_by_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_raise ArgumentError do
+      @repository.get_many_by_property("abc", "foo")
+    end
+  end
+
+  it "should accept a property name passed as a symbol to get_many_by_property" do
+    entity = make_entity(:id => 1, :abc => 'foo', :def => 'bar')
+    @repository.store_new(entity)
+    assert_equal [entity], @repository.get_many_by_property(:abc, "foo")
+  end
+
+
   describe "map_column", self do
     it "should map a schema property to a database column of the same name" do
       @db = Sequel.sqlite
