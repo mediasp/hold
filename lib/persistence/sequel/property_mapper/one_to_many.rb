@@ -27,7 +27,7 @@ module Persistence::Sequel
 
     attr_accessor :target_repo
     
-    attr_reader :writeable, :manual_cascade_delete, :order_property,
+    attr_reader :writeable, :manual_cascade_delete, :order_property, :order_direction,
       :foreign_key_property_name, :denormalized_count_column, :model_class
 
     def initialize(repo, property_name, options)
@@ -35,6 +35,7 @@ module Persistence::Sequel
 
       @foreign_key_property_name = options[:property] or raise "missing :property arg"
       @order_property = options[:order_property]
+      @order_direction = options[:order_direction] || :asc
 
       @extra_properties = {@foreign_key_property_name => true}
       @extra_properties[@order_property] = true if @order_property
@@ -65,7 +66,7 @@ module Persistence::Sequel
       target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_id(id, mapping[@foreign_key_property_name])
         dataset = dataset.filter(filter)
-        dataset = dataset.order(mapping[@order_property]) if @order_property
+        dataset = dataset.order(@order_property.send(@order_direction)) if @order_property
         dataset
       end.to_a
     end
@@ -79,7 +80,7 @@ module Persistence::Sequel
           select_more(foreign_key_mapper.column_qualified.as(:_one_to_many_id))
 
         if @order_property
-          dataset = dataset.order(:_one_to_many_id, target_repo.mapper(@order_property).column_qualified)
+          dataset = dataset.order(:_one_to_many_id, target_repo.mapper(@order_property).column_qualified.send(@order_direction))
         end
 
         dataset
@@ -153,7 +154,7 @@ module Persistence::Sequel
 
       # ensure their order_property corresponds to their order in the array, at least for new members.
       # (in an update, existing members may change order)
-      if @order_property
+      if @order_property # == :position
         if !value.id && (existing_index = value[@order_property])
           raise "OneToMany mapper: one of the new values for mapped property #{@property_name} has an existing \
                  value for the order property #{@order_property} property which is not equal to its index in \
