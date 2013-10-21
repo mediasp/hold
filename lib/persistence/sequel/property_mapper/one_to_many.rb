@@ -154,7 +154,7 @@ module Persistence::Sequel
 
       # ensure their order_property corresponds to their order in the array, at least for new members.
       # (in an update, existing members may change order)
-      if @order_property # == :position
+      if @order_property == :position
         if !value.id && (existing_index = value[@order_property])
           raise "OneToMany mapper: one of the new values for mapped property #{@property_name} has an existing \
                  value for the order property #{@order_property} property which is not equal to its index in \
