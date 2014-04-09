@@ -18,7 +18,7 @@ spec = Gem::Specification.new do |s|
   s.add_development_dependency('mocha', '~> 0.7')
   s.add_development_dependency('json')
   s.add_development_dependency('sqlite3')
-  s.add_dependency('sequel', '~> 3.11')
+  s.add_dependency('sequel', '~> 3')
   s.add_dependency('wirer', '>= 0.4.0')
   s.add_dependency('thin_models', '~> 0.1.4')
 
