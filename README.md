@@ -4,24 +4,24 @@ A ruby library geared towards separating persistence concerns from data model cl
 
 ## TL;DR
 
-If you want to dive in and write some code to get a feel for the library, take a look at the {file:QUICK-START.md}.
+If you want to dive in and write some code to get a feel for the library, take a look at [QUICK-START.md](QUICK-START.md).
 
 ## An Introduction
 
-The persistence library contains a set of interfaces for, and implementations of, the Repository pattern (http://martinfowler.com/eaaCatalog/repository.html) in Ruby.
+The persistence library contains a set of interfaces for, and implementations of, the [http://martinfowler.com/eaaCatalog/repository.html](Repository pattern) in Ruby.
 
 To summarize, the idea is that
 
 * You have Repositories which are responsible for persisting objects in a data store
 * Your data objects know nothing about persistence. They are just 'plain old' in-memory ruby objects can be created and manipulated independently of any particular repository.
 
-This is a substantially different approach to the 'Active Record' pattern (http://martinfowler.com/eaaCatalog/activeRecord.html), which is the approach that most persistence libraries in the Ruby world use, including (surprise surprise) ActiveRecord, but also Datamapper and Sequel::Model.
+This is a substantially different approach to the [http://martinfowler.com/eaaCatalog/activeRecord.html]('Active Record') pattern, which is the approach that most persistence libraries in the Ruby world use, including (surprise surprise) ActiveRecord, but also Datamapper and Sequel::Model.
 
-Of course there are various trade-offs involved when choosing between these two approaches. ActiveRecord is a more lightweight approach which is often preferred for small-to-mid-sized database-backed web applications where the data model is tightly coupled to a database schema; whereas Repositories start to show benefits when it comes to, eg:
+Of course there are various trade-offs involved when choosing between these two approaches. ActiveRecord is a more lightweight approach which is often preferred for small-to-mid-sized database-backed web applications where the data model is tightly coupled to a database schema; whereas Repositories start to show benefits when it comes to, e.g.:
 
 * Separation of concerns in a larger system; avoiding bloated model classes with too many responsibilities
-* Ease of switching between alternative back-end data stores, eg database-backed vs persisted-in-a-config-file vs persisted in-memory. In particular, this can help avoid database dependencies when testing
-* Systems which persist objects in multiple data stores -- eg in a relational database, serialized in a key-value cache, serialized in config files, ...
+* Ease of switching between alternative back-end data stores, e.g. database-backed vs persisted-in-a-config-file vs persisted in-memory. In particular, this can help avoid database dependencies when testing
+* Systems which persist objects in multiple data stores -- e.g. in a relational database, serialized in a key-value cache, serialized in config files, ...
 * Decoupling the structure of your data model from the schema of the data store used to persist it
 
 ## Interfaces
@@ -38,7 +38,7 @@ One approach which I've seen is to define one big 'store' interface which tries 
 
 This is a bit clunky; here I've tried to break it up into some more fine-grained interfaces for particular kinds of data stores, starting at the simplest possible: a Cell, and working our way up to an IdentitySetRepository, which corresponds to the CRUD-style interface of a typical object store which stores objects indexed by their identity.
 
-Nevertheless, it would be possible to go even further in terms of breaking up into more fine-grained interfaces, for example separating out the reading and writing portions of the interfaces. Tricky call where exactly to cut off with this stuff, especially in ruby which is duck-typed, meaning you don't have to give a formal name to some subset of an interface in order to use it in practise. It would also be possible to define even richer interfaces beyond that of IdentitySetRepository, eg adding an interface for querying the store based on critera other than just the id, but we've not formalised this yet.
+Nevertheless, it would be possible to go even further in terms of breaking up into more fine-grained interfaces, for example separating out the reading and writing portions of the interfaces. Tricky call where exactly to cut off with this stuff, especially in ruby which is duck-typed, meaning you don't have to give a formal name to some subset of an interface in order to use it in practise. It would also be possible to define even richer interfaces beyond that of IdentitySetRepository, e.g. adding an interface for querying the store based on critera other than just the id, but we've not formalised this yet.
 
 One other thing which it might be worth adding interfaces for is transactionality. It's a tricky one though; while it'd be easy enough to add a 'transaction do ...' to the interface of individual repositories, often you'll have multiple repositories running off the same underlying database which you want to use inside the same transaction context. So for now transactional stuff isn't abstracted away from the underlying persistence mechanism; if you're using Sequel, you can just call .transaction on the underlying Sequel database for example. If you wanted more serious abstraction around transactions, it might be best done as part of adding support for the 'unit of work' pattern used by libraries like Hibernate, SQLAlchemy etc.
 
@@ -52,7 +52,7 @@ This is pretty much the simplest persistence interface possible. It represents a
 
 Cells may optionally support being in an 'empty' state, ie a state where no data is stored in them. They should then also respond to 'clear' to clear out the call, and 'empty?' to determine whether or not the cell has anything stored in it.
 
-This allows distinctions to be drawn between eg "present in the hash but set to nil" and "not present in the hash", or "loaded and known to be nil" vs "not loaded", which are quite common distinctions to be found in data structures used for persistence.
+This allows distinctions to be drawn between e.g. "present in the hash but set to nil" and "not present in the hash", or "loaded and known to be nil" vs "not loaded", which are quite common distinctions to be found in data structures used for persistence.
 
 ### Persistence::ObjectCell
 
@@ -90,7 +90,7 @@ They're quite simple, not really intended for production use, and not designed t
 
 A common way of persisting objects is to serialize them into a string, and then persist that string somewhere (in a key-value store, as a file on disk...).
 
-Persistence::Serialized::HashRepository and Persistence::Serialized::IdentitySetRepository provide implementations of these interfaces which serialize and deserialize the object to/from a string, before/after persisting them in an underlying string-based HashRepository. You need to pass it this underlying store, and a serializer, eg Persistence::Serialized::JSONSerializer.
+Persistence::Serialized::HashRepository and Persistence::Serialized::IdentitySetRepository provide implementations of these interfaces which serialize and deserialize the object to/from a string, before/after persisting them in an underlying string-based HashRepository. You need to pass it this underlying store, and a serializer, e.g. Persistence::Serialized::JSONSerializer.
 
 ## Sequel-backed persistence
 
@@ -128,7 +128,7 @@ For this I'll use the following schema:
 ### Creating a repository for a simple data model class
 
 There is a class-based DSL which is used to configure a new repository class. The simplest example would be:
-
+``` ruby
     Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal)
 
     class AuthorRepository < Persistence::Sequel::IdentitySetRepository
@@ -137,7 +137,7 @@ There is a class-based DSL which is used to configure a new repository class. Th
       map_column :title
       map_column :fave_breakfast_cereal
     end
-
+```
 About the model class:
 
 - There is a basic protocol which your model class needs to observe, in order to work here, so the repository can create, update and read the properties off model instances. For now, the only officially-supported model classes are subclasses of ThinModels::Struct from the thin_models gem, and it's best to look at this for reference. High on the TODO list though is to make it clear exactly what interface you need to support, and to test against some different model class implementations. There's certainly nothing in principle stopping it working with a very basic lightweight plain-old-ruby model class; in fact LazyData pretty much is just one of these, plus some small conveniences (including support for lazy property loading).
@@ -209,7 +209,7 @@ is preferable to this one, which may be more familiar to ActiveRecord users:
 
 The advantage being that in the former case, the new property will only get set on the in-memory object if the update succeeds, and the repo will only update the specified properties not all of them.
 
-The other thing is the approach taken in the latter example may not scale up to more complex scenarios, where you expect to make a bunch of changes to an in-memory object graph and then persist them all in one go with 'store'. There is some support for this in the one_to_many, many_to_many etc mappers, but the general case is quite hard, and you really need a full-on Unit Of Work pattern to do a rigorous job of it where it guarantees to persist all changes to an object graph in the right order. So for now if you encounter problems along these lines, eg with callbacks not running in the right order, take it as a sign that you may just need to be more fine-grained and explicit in the way you're updating your subobjects. Better take on this deffo part of the longer-term TODO.
+The other thing is the approach taken in the latter example may not scale up to more complex scenarios, where you expect to make a bunch of changes to an in-memory object graph and then persist them all in one go with 'store'. There is some support for this in the one_to_many, many_to_many etc mappers, but the general case is quite hard, and you really need a full-on Unit Of Work pattern to do a rigorous job of it where it guarantees to persist all changes to an object graph in the right order. So for now if you encounter problems along these lines, e.g. with callbacks not running in the right order, take it as a sign that you may just need to be more fine-grained and explicit in the way you're updating your subobjects. Better take on this deffo part of the longer-term TODO.
 
 Note, you can also use a model object or other hash-like thing as an update, in which case it will update any properties which are defined and present (has_key?) on the update model:
 
@@ -230,8 +230,8 @@ In particular, the property mapper has the opportunity to:
 
 - Specify particular Sequel expressions (with aliases) to add into the SELECT clause of the main query being done to load an object, when this property is to be loaded
 - Specify which tables which need to be added into the FROM clause of this query in order for the above SELECT clause to work (although they need to be tables which the repository knows about, and the repository takes care of JOINing them. See the section on using multiple tables for more info, and note that this doesn't at present work for adding arbitrary eager-association-loading joins into a query, only for when the object being loaded is spread across multiple tables in a one-to-one fashion)
-- To load the value for this property for a particular object ID, given the sequel result row resulting from the above SELECT query (note it doesn't have to get the value from this query and its result row, it could for example do its own separate query if required eg to load associated objects).
-- Given a list of IDs and a list of result rows, to do the above in an efficient batched fashion. This provides a basic way to avoid the classic 'n+1' problem, eg the foreign key mapper uses this to do a `WHERE id IN (1,2,3,...)`
+- To load the value for this property for a particular object ID, given the sequel result row resulting from the above SELECT query (note it doesn't have to get the value from this query and its result row, it could for example do its own separate query if required e.g. to load associated objects).
+- Given a list of IDs and a list of result rows, to do the above in an efficient batched fashion. This provides a basic way to avoid the classic 'n+1' problem, e.g. the foreign key mapper uses this to do a `WHERE id IN (1,2,3,...)`
 - To do something relevant to this property `{pre,post}_{insert,update,delete}` of its parent object
 - Make a Sequel filter expression which can be used to build a query querying for a particular value of this property
 
@@ -284,7 +284,7 @@ An example is in order (continuing on from our examples the AuthorRepository abo
     book_repo = BookRepository.new(db)
     book_repo.mapper(:author).target_repo = author_repo
 
-Then we can eg:
+Then we can e.g.:
 
     > book = Book.new(:title => 'War and peace', :author => author)
     > book_repo.store_new(book)
@@ -331,7 +331,7 @@ But the referenced object isn't treated as some kind of aggregate sub-object whi
 ### map_one_to_many
 
 This is for classic one to many associations, like one Author has many Books. To demo this, let's revisit the AuthorRepository:
-
+``` ruby
     Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal, :books)
 
     class AuthorRepository < Persistence::Sequel::IdentitySetRepository
@@ -345,19 +345,21 @@ This is for classic one to many associations, like one Author has many Books. To
     book_repo = BookRepository.new(db)
     book_repo.mapper(:author).target_repo = author_repo
     author_repo.mapper(:books).target_repo = book_repo
-
+```
 For this to work, we're relying on Book having the specified corresponding propery `:author`, and this property being mapped via map_foreign_key. The value for the books property for author x is then defined to be an array of those books for whom the author property is author x. Or equivalently on the database side, those whose `:author_id` column matches our `:id`.
 
-Also, see what I meant earlier about cyclic references between repositories? this is why they have to be wired up after being instantiated, and why using Wirer makes it more pleasant if you're doing a lot of it.
+Also, see what I meant earlier about cyclic references between repositories? This is why they have to be wired up after being instantiated, and why using Wirer makes it more pleasant if you're doing a lot of it.
 
 You can then use it like so to:
 
+``` ruby
     > author = author_repo.get_by_id(1)
     > author.books
     ...
     SELECT `books`.`title` AS `books_title`, `books`.`author_id` AS `books_author_id`, `books`.`id` AS `id` FROM `books` WHERE (`books`.`author_id` = 1)
     ...
      => [#<Book:0x101892b58 lazy, @values={:title=>"War and peace", :id=>1, ...}>, #<Book:0x1018929c8 lazy, @values={:title=>"xyz", :id=>3}>]
+```
 
 By default this property mapper is read-only, which is a common way to use it. For example in this case, if you wanted to make changes to the associations between books and authors, you'd probably do this by updating the author on the books, rather than updating the entire books collection on some author.
 
@@ -365,8 +367,9 @@ However sometimes you *do* want to be able to treat the associated objects (book
 
 If you want this kind of behaviour, you need to explicitly buy into it by specifying `:writeable => true`:
 
+``` ruby
     map_one_to_many :books, :model_class => Book, :property => :author, :writeable => true
-
+```
 Now you are now able to create and update the entire collection of books all in one go:
 
     > author = Author.new(
@@ -409,6 +412,7 @@ Note that this approach very much treats the books as wholly-owned subobjects of
 
 `map_one_to_many` also supports an ordering on these collections via an :order_property argument. At present you need to have this 'order property' on the model class of the child objects; it's an integer representing the position of that child object in the array. If you're only using map_one_to_many in a read-only fashion, then you can use pretty much whichever values you like for the order column, it will just get added in an ORDER BY clause. For a writeable map_one_to_many though, the order property should be an integer index, starting at zero and with no gaps; it is managed for you though when writing. An example:
 
+``` ruby
     Book = ThinModels::StructWithIdentity(:title, :author, :position)
 
     # in AuthorRepository:
@@ -417,25 +421,27 @@ Note that this approach very much treats the books as wholly-owned subobjects of
     # in BookRepository:
     map_foreign_key :author, :model_class => Author
     map_column :position
-
+```
 If you try the example above, you'll see it automatically populates this order property when saving the new book objects:
 
+``` sql
     INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('foo', 126, 0)
     INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('bar', 126, 1)
     INSERT INTO `books` (`title`, `author_id`, `position`) VALUES ('baz', 126, 2)
-
+```
 If you *do* pre-populate the values for the order property though, then it will be expected to match the ordering that the objects are given in.
 
 When selecting the property it'll add an ORDER BY, so you'll get them back in the same order:
-
+``` sql
     SELECT `books`.`title` AS `books_title`, `books`.`position` AS `books_position`, `books`.`author_id` AS `books_author_id`, `books`.`id` AS `id` FROM `books` WHERE (`books`.`author_id` = 126) ORDER BY (`books`.`position`)
-
+```
 ### map_many_to_many
 
 This is the classic many_to_many which uses rows in a 'join table' with two foreign keys, to store the relationships in a many-to-many association.
 
 In our example (which is now growing slightly contrived) I'm going to have a many-to-many relationship where Authors can be 'influenced by' a set of Books:
 
+``` ruby
     Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal, :books, :influenced_by_books)
     Book = ThinModels::StructWithIdentity(:title, :author, :position, :influenced_authors)
 
@@ -459,6 +465,7 @@ In our example (which is now growing slightly contrived) I'm going to have a man
     # after construction these will need wiring up too
     author_repo.mapper(:influenced_by_books).target_repo = book_repo
     book_repo.mapper(:influenced_authors).target_repo = author_repo
+```
 
 The options here are:
 
@@ -491,6 +498,7 @@ Normally you would only make one of the two corresponding many_to_many associati
 
 If you specify an :order_column, you can make it an ordered list, although note that if you're mapping the association via many_to_many properties on both ends, this order can obviously only apply on one end. In our case we'll make it the order of books within the 'influenced_by_books' list for an author:
 
+``` ruby
     map_many_to_many(:influenced_by_books,
       :model_class  => Book,
       :join_table   => :influenced_by,
@@ -499,14 +507,18 @@ If you specify an :order_column, you can make it an ordered list, although note 
       :order_column => :position,
       :writeable    => true
     )
+```
 
-Then you'll find the example above does, eg:
+Then you'll find the example above does, e.g.:
 
+``` sql
     INSERT INTO `influenced_by` (`author_id`, `book_id`, `position`) VALUES (129, 1, 0), (129, 2, 1), (129, 3, 2), (129, 5, 3), (129, 7, 4), (129, 8, 5), (129, 9, 6), (129, 10, 7)
-
+```
 and
 
+``` sql
     SELECT `books`.`title` AS `books_title`, `books`.`id` AS `id`, `books`.`position` AS `books_position` FROM `books` INNER JOIN `influenced_by` ON (`influenced_by`.`book_id` = `books`.`id`) WHERE (`influenced_by`.`author_id` = 129) ORDER BY `influenced_by`.`position`
+```
 
 ### map_custom_query and custom_query_single_value
 
@@ -548,14 +560,14 @@ You can wire them up yourself if you want, but Persistence::Sequel also supports
 In no particular order:
 
 - Chaining repositories, so you can put a Serialized cache repository infront of a Sequel repository in order to cache certain serialized versions of objects before hitting the database, with options for whether to write_on_miss etc.
-  - Formalising an interface which allows you to specify which 'version' of an object you want to fetch, eg you might fetch full or partial versions, just certain properties etc. Lazy loading makes this less necessary, *but* it is going to be more useful when it comes to storing and loading objects from a serialized cache.
+  - Formalising an interface which allows you to specify which 'version' of an object you want to fetch, e.g. you might fetch full or partial versions, just certain properties etc. Lazy loading makes this less necessary, *but* it is going to be more useful when it comes to storing and loading objects from a serialized cache.
 - Overall tidyup of (and better test coverage for) the Sequel code
 - Some performance optimisations for Sequel repositories, in particular to the way lazy loading works, and avoiding unnecessary queries when traversing an object graph.
 - Formalising some concept of the schema of ruby objects which repositories are designed to persist
 - Database-backed implementations of other simpler Persistence interfaces like HashRepository, SetRepository and ArrayCell
 - Support for Identity Map and Unit of Work patterns (a biggie)
-- Implementations of the Persistence interfaces for some NoSQL datastores (eg Redis would be nice)
+- Implementations of the Persistence interfaces for some NoSQL datastores (e.g. Redis would be nice)
 - Porting across some more featureful and robust disk-backed implementations of the repository interfaces, making it a no-brainer to use config-file-backed persistence
-- Proper support for the use of non-Sequel repositories together with foreign_key mappers, so eg you could have it load a licensor from a licensor config file based on a licensor_id column in the database. The property mappers were designed with this sort of capability in mind but a bit more work needs doing on it.
+- Proper support for the use of non-Sequel repositories together with foreign_key mappers, so e.g. you could have it load a licensor from a licensor config file based on a licensor_id column in the database. The property mappers were designed with this sort of capability in mind but a bit more work needs doing on it.
 - Perhaps extend the property mapper concept to non-sequel-backed repositories too; in the process seeing if more could be done to unify the way property mappers work with the way repositories expose object cells, and object cells expose property cells.
 - Better-thought-out support in the persistence interfaces for reflection to discover the types of objects which can be persisted in a particular cell/repository/etc. This has been done to an extent but was a bit of a rush job. Perhaps would be nice to implement this via optional support for some kind of schema library. A good approach to this might also help to pin down in a tidy precise way how repositories ought to behave in the presence of polymorphism and subclassing.
