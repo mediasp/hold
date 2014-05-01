@@ -3,8 +3,8 @@ require_relative '../lib/persistence/in_memory'
 require_relative '../lib/persistence/serialized'
 require_relative '../lib/persistence/serialized/json_serializer'
 
-describe "Persistence::Serialized::HashRepository" do
-  behaves_like "Persistence::HashRepository"
+describe 'Persistence::Serialized::HashRepository' do
+  behaves_like 'Persistence::HashRepository'
 
   def make_hash_repo
     cache = Persistence::InMemory::HashRepository.new

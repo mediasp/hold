@@ -3,7 +3,7 @@ require_relative '../lib/persistence/file/hash_repository'
 require 'tmpdir'
 require 'fileutils'
 
-describe "Persistence::File::HashRepository" do
+describe 'Persistence::File::HashRepository' do
   behaves_like "Persistence::HashRepository"
 
   def make_hash_repo
