@@ -1,5 +1,5 @@
-require 'test/interfaces'
-require 'persistence/sequel'
+require_relative 'interfaces'
+require_relative '../persistence/sequel'
 
 describe "Persistence::Sequel::IdentitySetRepository" do
   behaves_like "Persistence::IdentitySetRepository"

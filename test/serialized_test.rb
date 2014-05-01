@@ -1,7 +1,7 @@
-require 'test/interfaces'
-require 'persistence/in_memory'
-require 'persistence/serialized'
-require 'persistence/serialized/json_serializer'
+require_relative 'interfaces'
+require_relative '../lib/persistence/in_memory'
+require_relative '../lib/persistence/serialized'
+require_relative '../lib/persistence/serialized/json_serializer'
 
 describe "Persistence::Serialized::HashRepository" do
   behaves_like "Persistence::HashRepository"

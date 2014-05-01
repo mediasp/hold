@@ -1,5 +1,5 @@
-require 'test/helpers'
-require 'persistence/interfaces'
+require_relative 'helpers'
+require_relative '../lib/persistence/interfaces'
 require 'thin_models/struct/identity'
 
 module PersistenceTestHelpers

@@ -1,4 +1,4 @@
-require 'lib/persistence/version'
+require_relative 'lib/persistence/version'
 
 desc 'build a gem release and push it to dev'
 task :release do

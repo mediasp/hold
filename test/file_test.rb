@@ -1,5 +1,5 @@
-require 'test/interfaces'
-require 'persistence/file/hash_repository'
+require_relative 'interfaces'
+require_relative '../lib/persistence/file/hash_repository'
 require 'tmpdir'
 require 'fileutils'
 
