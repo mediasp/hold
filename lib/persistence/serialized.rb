@@ -42,6 +42,7 @@ module Persistence
     def has_key?(key)
       @cache.has_key?(cache_key(key))
     end
+    alias_method :key?, :has_key?
 
     def clear_key(key)
       @cache.clear_key(cache_key(key))

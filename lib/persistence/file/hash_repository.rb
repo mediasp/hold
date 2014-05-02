@@ -54,5 +54,6 @@ module Persistence
     def has_key?(key)
       ::File.exist?(path_to_key(key))
     end
+    alias_method :key?, :has_key?
   end
 end

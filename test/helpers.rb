@@ -1,7 +1,8 @@
 require 'rubygems'
 
+require 'test/unit'
 require 'test/spec'
-require 'mocha'
+require 'mocha/setup'
 
 # replace 'instance_eval' with 'class_eval' in this method from test/spec, to allow shared contexts to
 # define helper methods as well as declare specs.

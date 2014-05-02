@@ -247,6 +247,7 @@ module Persistence
     def has_key?(key)
       raise UnsupportedOperation
     end
+    alias_method :key?, :has_key?
 
     def key_cell(key)
       KeyCell.new(self, key)

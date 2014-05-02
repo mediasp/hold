@@ -1,5 +1,5 @@
-require 'test/interfaces'
-require 'persistence/in_memory'
+require_relative 'interfaces'
+require_relative '../lib/persistence/in_memory'
 
 describe "Persistence::InMemory::Cell" do
   behaves_like "Persistence::Cell"

@@ -13,8 +13,9 @@ spec = Gem::Specification.new do |s|
   s.summary = "A library geared towards separating persistence concerns from data model classes"
 
   s.add_development_dependency('rake')
+  s.add_development_dependency('test-unit', '~> 1.2')
   s.add_development_dependency('test-spec')
-  s.add_development_dependency('mocha')
+  s.add_development_dependency('mocha', '~> 0.7')
   s.add_development_dependency('json')
   s.add_development_dependency('sqlite3')
   s.add_dependency('sequel', '~> 3.11.0')

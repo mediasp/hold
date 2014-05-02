@@ -109,6 +109,7 @@ module Persistence
     def has_key?(key)
       @hash.has_key?(key)
     end
+    alias_method :key?, :has_key?
   end
 
   class InMemory::SetRepository
