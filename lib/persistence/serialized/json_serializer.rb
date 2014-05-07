@@ -7,6 +7,6 @@ class Persistence::Serialized::JSONSerializer
   end
 
   def deserialize(string)
-    JSON.parse("{\"foo\": #{string}}")['foo']
+    JSON.parse(string)
   end
 end

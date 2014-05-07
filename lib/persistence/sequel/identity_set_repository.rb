@@ -293,14 +293,16 @@ module Persistence::Sequel
       @db.transaction(*p, &b)
     end
 
-    # This is the main mechanism to retrieve stuff from the repo via custom queries.
+    # This is the main mechanism to retrieve stuff from the repo via custom
+    # queries.
 
     def query(properties=nil, &b)
       properties = @default_properties if properties == true || properties.nil?
       Query.new(self, properties, &b)
     end
 
-    # Can take a block which may add extra conditions, joins, order etc onto the relevant query.
+    # Can take a block which may add extra conditions, joins, order etc onto
+    # the relevant query.
     def get_many_with_dataset(options={}, &b)
       query(options[:properties], &b).to_a(options[:lazy])
     end
@@ -309,16 +311,25 @@ module Persistence::Sequel
       query(options[:properties]).to_a(options[:lazy])
     end
 
-    # like get_many_with_dataset but just gets a single row, or nil if not found. adds limit(1) to the dataset for you.
+    # like get_many_with_dataset but just gets a single row, or nil if not
+    # found. adds limit(1) to the dataset for you.
     def get_with_dataset(options={}, &b)
       query(options[:properties], &b).single_result
     end
 
     def get_property(entity, property, options={})
-      result = query(property => options[:properties]) do |dataset, property_columns|
-        filter = @identity_mapper.make_filter(entity.id, property_columns[@identity_property])
-        dataset.filter(filter)
-      end.single_result
+      unless property.is_a? Symbol
+        fail ArgumentError, 'get_property must suppy a symbol'
+      end
+      begin
+        result = query(property => options[:properties]) do |dataset, property_columns|
+          filter = @identity_mapper.make_filter(entity.id, property_columns[@identity_property])
+          dataset.filter(filter)
+        end.single_result
+      rescue TypeError
+        # catches test errors caught by []ing a string post 1.8
+        raise ArgumentError, 'get_property caught a type error, check options'
+      end
       result && result[property]
     end
 

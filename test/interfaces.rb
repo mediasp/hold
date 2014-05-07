@@ -423,7 +423,7 @@ describe_shared "Persistence::IdentitySetRepository" do
       @repository.store(entity)
       assert_equal 'foo', @repository.get_by_id(1).abc
       entity = make_entity(id: 1, abc: 'bar')
-      assert_raise(IdentityConflict) do
+      assert_raise(Persistence::IdentityConflict) do
         @repository.store_new(entity)
       end
     end

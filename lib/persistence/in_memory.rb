@@ -107,7 +107,7 @@ module Persistence
     end
 
     def has_key?(key)
-      @hash.has_key?(key)
+      @hash.key?(key)
     end
     alias_method :key?, :has_key?
   end
