@@ -13,8 +13,13 @@ module Persistence::Sequel
       @value_column = options[:value_column] || :value
 
       @dataset    = @repository.db[@table]
-      @select_kv  = @repository.db[@table].select(@key_column.as(:key), @value_column.as(:value))
-      @select_all = @repository.db[@table].select(@key_column.as(:key), @value_column.as(:value), @foreign_key.as(:id))
+      @select_kv  = @repository.db[@table].select(
+        Sequel.as(@key_column,:key),
+        Sequel.as(@value_column,:value))
+      @select_all = @repository.db[@table].select(
+        Sequel.as(@key_column,:key),
+        Sequel.as(@value_column,:value),
+        Sequel.as(@foreign_key,:id))
     end
 
     def load_value(row=nil, id=nil, properties=nil)

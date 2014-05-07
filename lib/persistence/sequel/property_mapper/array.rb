@@ -12,9 +12,11 @@ module Persistence::Sequel
       @order_column = options[:order_column]
 
       @dataset    = @repository.db[@table]
-      @select_v   = @repository.db[@table].select(@value_column.as(:value))
+      @select_v   = @repository.db[@table].select(Sequel.as(@value_column,:value))
       @select_v   = @select_v.order(@order_column) if @order_column
-      @select_all = @repository.db[@table].select(@value_column.as(:value), @foreign_key.as(:id))
+      @select_all = @repository.db[@table].select(
+        Sequel.as(@value_column,:value),
+        Sequel.as(@foreign_key,:id))
       @select_all = @select_all.order(@order_column) if @order_column
     end
 

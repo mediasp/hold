@@ -31,7 +31,7 @@ module Persistence::Sequel
       id_cols = @property_columns[@repository.identity_property]
       @count_dataset = @dataset.select(*id_cols)
 
-      @dataset = @dataset.select_more(*@aliased_columns)
+      @dataset = @dataset.select(*@aliased_columns)
     end
 
     private

@@ -26,7 +26,7 @@ module Persistence::Sequel
     end
 
     attr_accessor :target_repo
-    
+
     attr_reader :writeable, :manual_cascade_delete, :order_property, :order_direction,
       :foreign_key_property_name, :denormalized_count_column, :model_class
 
@@ -66,7 +66,7 @@ module Persistence::Sequel
       target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_id(id, mapping[@foreign_key_property_name])
         dataset = dataset.filter(filter)
-        dataset = dataset.order(@order_property.send(@order_direction)) if @order_property
+        dataset = dataset.order(Sequel.send(@order_direction, @order_property)) if @order_property
         dataset
       end.to_a
     end
@@ -75,9 +75,9 @@ module Persistence::Sequel
       properties = (properties || target_repo.default_properties).merge(@extra_properties)
       query = target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_ids(ids, mapping[@foreign_key_property_name])
-        dataset = dataset.
-          filter(filter).
-          select_more(foreign_key_mapper.column_qualified.as(:_one_to_many_id))
+        dataset = dataset
+          .filter(filter)
+          .select(foreign_key_mapper.column_qualified.as(:_one_to_many_id))
 
         if @order_property
           dataset = dataset.order(:_one_to_many_id, target_repo.mapper(@order_property).column_qualified.send(@order_direction))

@@ -33,7 +33,7 @@ module Persistence::Sequel
     end
 
     attr_accessor :target_repo
-    
+
     attr_reader :join_table, :left_key, :right_key, :order_column, :writeable,
                 :manual_cascade_delete, :auto_store_new, :distinct, :filter, :model_class
 
@@ -79,10 +79,10 @@ module Persistence::Sequel
     def load_values(rows, ids=nil, properties=nil, &b)
       query = target_repo.query(properties) do |dataset, mapping|
         id_column = mapping[target_repo.identity_property]
-        dataset = dataset.
-          join(@join_table, @qualified_right_key => id_column).
-          filter(@qualified_left_key => ids).
-          select_more(@qualified_left_key.as(:_many_to_many_id))
+        dataset = dataset
+          .join(@join_table, @qualified_right_key => id_column)
+          .filter(@qualified_left_key => ids)
+          .select(Sequel.as(@qualified_left_key,:_many_to_many_id))
         dataset = dataset.filter(@filter) if @filter
         dataset = dataset.distinct if @distinct
         dataset = dataset.order(:_many_to_many_id, @qualified_order_column) if @qualified_order_column

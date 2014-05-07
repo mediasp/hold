@@ -44,7 +44,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
     assert_equal 'y', yy.abc
     assert_equal 'y', yy.def
     xxyy = @repository.get_many_with_dataset do |ds, mapping|
-      ds.filter(abc: :def).order(:abc.desc)
+      ds.filter(abc: :def).order(Sequel.desc(:abc))
     end
     assert_equal ['y', 'y'], [xxyy[0].abc, xxyy[0].def]
     assert_equal ['x', 'x'], [xxyy[1].abc, xxyy[1].def]
@@ -423,7 +423,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
 
     it 'allows the dataset to be filtered, ordered etc via a block' do
       @cell = @repository.array_cell_for_dataset do |ds,mapping|
-        ds.filter(id: [@entities[0].id, @entities[1].id]).order(:id.desc)
+        ds.filter(id: [@entities[0].id, @entities[1].id]).order(Sequel.desc(:id))
       end
       assert_equal @entities[0..1].sort_by {|e| -e.id}, @cell.get
       assert_equal 2, @cell.get_length
