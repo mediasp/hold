@@ -82,7 +82,7 @@ module Persistence::Sequel
         dataset = dataset
           .join(@join_table, @qualified_right_key => id_column)
           .filter(@qualified_left_key => ids)
-          .select(@qualified_left_key.as(:_many_to_many_id))
+          .select(Sequel.as(@qualified_left_key,:_many_to_many_id))
         dataset = dataset.filter(@filter) if @filter
         dataset = dataset.distinct if @distinct
         dataset = dataset.order(:_many_to_many_id, @qualified_order_column) if @qualified_order_column
