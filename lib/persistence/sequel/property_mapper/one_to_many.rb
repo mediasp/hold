@@ -66,7 +66,7 @@ module Persistence::Sequel
       target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_id(id, mapping[@foreign_key_property_name])
         dataset = dataset.filter(filter)
-        dataset = dataset.order(@order_property.send(@order_direction)) if @order_property
+        dataset = dataset.order(Sequel.send(@order_direction, @order_property)) if @order_property
         dataset
       end.to_a
     end
