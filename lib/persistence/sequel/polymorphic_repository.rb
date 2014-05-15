@@ -1,6 +1,6 @@
-module Persistence::Sequel
+module Hold::Sequel
   class PolymorphicRepository
-    include Persistence::IdentitySetRepository
+    include Hold::IdentitySetRepository
 
     attr_reader :db, :table, :type_column, :id_column, :type_to_model_class_mapping,
                 :repos_for_model_classes, :model_class_to_type_mapping

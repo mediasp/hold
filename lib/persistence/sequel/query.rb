@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # A query has a dataset and mappings constructed to select a particular
   # set of properties on a particular Sequel::IdentitySetRepository
   class Query
@@ -77,7 +77,7 @@ module Persistence::Sequel
     end
 
     def single_result
-      row = Persistence::Sequel.translate_exceptions {@dataset.first} or return
+      row = Hold::Sequel.translate_exceptions {@dataset.first} or return
 
       id = @repository.identity_mapper.load_value(row)
       property_hash = {@repository.identity_property => id}

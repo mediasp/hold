@@ -1,8 +1,8 @@
 require_relative 'interfaces'
-require_relative '../lib/persistence/sequel'
+require_relative '../lib/hold/sequel'
 
-describe 'Persistence::Sequel::IdentitySetRepository' do
-  behaves_like 'Persistence::IdentitySetRepository'
+describe 'Hold::Sequel::IdentitySetRepository' do
+  behaves_like 'Hold::IdentitySetRepository'
 
   # We create a fresh in-memory Sqlite database for each test.
   # If this proves too slow maybe re-use the database but wrap the run method
@@ -19,7 +19,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
       varchar :abc
       varchar :def
     end
-    Persistence::Sequel::IdentitySetRepository(AbcDef, :test_table) do
+    Hold::Sequel::IdentitySetRepository(AbcDef, :test_table) do
       map_column :abc
       map_column :def
     end.new(@db)
@@ -118,7 +118,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         varchar :string, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {map_column :string}.new(@db)
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {map_column :string}.new(@db)
       entity = @model_class.new(string: 'foo')
       repo.store(entity)
       assert_equal 'foo', @db[:test_table].select(:string).filter(id: entity.id).single_value
@@ -132,7 +132,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         varchar :string_column_with_particular_name, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) do
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do
         map_column :string, column_name: :string_column_with_particular_name
       end.new(@db)
       entity = @model_class.new(string: 'foo')
@@ -150,7 +150,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         float :float
       end
       @model_class = ThinModels::StructWithIdentity(:integer, :datetime, :float)
-      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
         map_column :integer
         map_column :datetime
         map_column :float
@@ -180,7 +180,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         varchar :foo, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:foo)
-      repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
         map_transformed_column :foo,
         to_sequel: proc { |v| v.join(',') },
         from_sequel: proc { |v| v.split(',') }
@@ -201,7 +201,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         datetime :updated_at, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:created_at, :updated_at)
-      @repo = Persistence::Sequel::IdentitySetRepository(@model_class, :test_table) {
+      @repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
         # the args here can all actually be left out as they're the defaults, but to demonstrate:
         map_created_at :created_at
         map_updated_at :updated_at, column_name: :updated_at
@@ -249,10 +249,10 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
       end
       bar_model_class = @bar_model_class = ThinModels::StructWithIdentity(:string)
       @foo_model_class = ThinModels::StructWithIdentity(:bar)
-      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) {
+      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) {
         map_column :string
       }.new(@db)
-      @foo_repo = Persistence::Sequel::IdentitySetRepository(@foo_model_class, :foo) {
+      @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) {
         map_foreign_key :bar, model_class: bar_model_class
       }.new(@db)
       @foo_repo.mapper(:bar).target_repo = @bar_repo
@@ -359,10 +359,10 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
       bar_model_class = @bar_model_class = Bar #ThinModels::StructWithIdentity(:foos)
       foo_model_class = @foo_model_class = Foo #ThinModels::StructWithIdentity(:bar)
       # foo_repo = 123
-      bar_repo = @bar_repo = Persistence::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
+      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
         map_one_to_many :foos, model_class: foo_model_class, property: :bar
       end.new(@db)
-      foo_repo = @foo_repo = Persistence::Sequel::IdentitySetRepository(@foo_model_class, :foo) do
+      foo_repo = @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) do
         map_foreign_key :bar, model_class: bar_model_class
       end.new(@db)
 
@@ -455,7 +455,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
   end
 
   describe 'mapped to multiple tables', self do
-    behaves_like "Persistence::IdentitySetRepository"
+    behaves_like "Hold::IdentitySetRepository"
 
     def make_id_set_repo
       @db = Sequel.sqlite
@@ -467,7 +467,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         integer :base_id
         varchar :def
       end
-      Persistence::Sequel::IdentitySetRepository(AbcDef, :base) do
+      Hold::Sequel::IdentitySetRepository(AbcDef, :base) do
         use_table :base
         use_table :extra, id_column: :base_id
         map_column :abc
@@ -477,7 +477,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
   end
 
   describe 'WithPolymorphicTypeColumn used without any extra subclass-specific properties', self do
-    behaves_like "Persistence::IdentitySetRepository"
+    behaves_like "Hold::IdentitySetRepository"
 
     def make_id_set_repo
       @db = Sequel.sqlite
@@ -489,7 +489,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         varchar :abc
         varchar :def
       end
-      Class.new(Persistence::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
+      Class.new(Hold::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
         use_table :test_table
         set_type_column(:type, the_superclass => 'super', the_subclass => 'sub')
         set_model_class AbcDef
@@ -530,7 +530,7 @@ describe 'Persistence::Sequel::IdentitySetRepository' do
         attribute :def
       end
 
-      @baseclass_repo_class = Class.new(Persistence::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
+      @baseclass_repo_class = Class.new(Hold::Sequel::IdentitySetRepository::WithPolymorphicTypeColumn) do
         use_table :base, id_sequence: true
         set_type_column(:type, the_baseclass => 'baseclass', the_subclass => 'subclass')
         set_model_class(the_baseclass)

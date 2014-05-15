@@ -1,6 +1,6 @@
 require 'thin_models/lazy_array'
 
-module Persistence
+module Hold
   class Error < ::RuntimeError; end
   class UnsupportedOperation < Error; end
   class EmptyConflict < Error; end
@@ -175,7 +175,7 @@ module Persistence
     # reference to a[:foo].
     #
     # If you want the latter, you probably want to be updating a[:foo] in some
-    # persistence cell which is canonical for the identity of that object.
+    # hold cell which is canonical for the identity of that object.
     #
     # If you don't want the former, don't return a PropertyCell which allows
     # partial updates. For simplicity's sake this is the stance taken by the

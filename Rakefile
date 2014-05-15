@@ -1,9 +1,9 @@
-require_relative 'lib/persistence/version'
+require_relative 'lib/hold/version'
 
 desc 'build a gem release and push it to dev'
 task :release do
-  sh 'gem build persistence.gemspec'
-  sh "scp persistence-#{Persistence::VERSION}.gem dev.playlouder.com:/var/www/gems.playlouder.com/pending"
+  sh 'gem build hold.gemspec'
+  sh "scp hold-#{Hold::VERSION}.gem dev.playlouder.com:/var/www/gems.playlouder.com/pending"
   sh "ssh dev.playlouder.com sudo include_gems.sh /var/www/gems.playlouder.com/pending"
 end
 
@@ -27,9 +27,9 @@ end
 
 desc 'deploy the docs to public.playlouder.com'
 task :deploy_docs => :yard do
-  fname = "persistence-#{Persistence::VERSION}.tar.gz"
+  fname = "hold-#{Hold::VERSION}.tar.gz"
   host = 'public.playlouder.com'
-  www_dir = "/var/www/public.playlouder.com/doc/persistence/"
+  www_dir = "/var/www/public.playlouder.com/doc/hold/"
   `tar -czf #{fname} doc`
   `scp #{fname} #{host}:/tmp/.`
   `ssh #{host} tar xf /tmp/#{fname} -C #{www_dir}`

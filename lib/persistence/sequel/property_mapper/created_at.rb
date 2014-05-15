@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   class PropertyMapper::CreatedAt < PropertyMapper::Column
     def build_insert_row(entity, table, row, id=nil)
       row[@column_name] = Time.now if table == @table

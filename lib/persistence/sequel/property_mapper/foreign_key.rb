@@ -1,9 +1,9 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Maps to an associated object which is fetched by id from a target repository using a foriegn key column
   class PropertyMapper::ForeignKey < PropertyMapper
     def self.setter_dependencies_for(options={})
       features = [*options[:model_class]].map {|klass| [:get_class, klass]}
-      {:target_repo => [Persistence::IdentitySetRepository, *features]}
+      {:target_repo => [Hold::IdentitySetRepository, *features]}
     end
 
     attr_accessor :target_repo

@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Maps to an array of associated objects stored in another repo, where a :join_table exists with columns for:
   #   - our id property (:left_key)
   #   - other repo's id property (:right_key)

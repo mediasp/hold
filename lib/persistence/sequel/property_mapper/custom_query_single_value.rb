@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # A read-only mapper for properties which are a single instance of a model class loaded from another repo.
   #
   # It allows you to fetch the item via an arbitrary custom query against the target repository.

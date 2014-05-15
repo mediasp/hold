@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   class PropertyMapper::Identity < PropertyMapper
     def columns_aliases_and_tables_for_select(preferred_table=@repository.main_table)
       qualified = qualified_column_name(preferred_table)

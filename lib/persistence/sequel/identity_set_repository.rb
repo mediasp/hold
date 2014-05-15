@@ -1,6 +1,6 @@
 require 'wirer'
 
-module Persistence::Sequel
+module Hold::Sequel
   def self.IdentitySetRepository(model_class, main_table=nil, &block)
     Class.new(IdentitySetRepository) do
       set_model_class model_class
@@ -10,7 +10,7 @@ module Persistence::Sequel
   end
 
   class IdentitySetRepository
-    include Persistence::IdentitySetRepository
+    include Hold::IdentitySetRepository
 
     class << self
       def model_class
@@ -43,7 +43,7 @@ module Persistence::Sequel
 
       def setter_dependencies(instance=nil)
         dependencies = {:observers => Wirer::Dependency.new(
-          :module   => Persistence::Sequel::RepositoryObserver,
+          :module   => Hold::Sequel::RepositoryObserver,
           :features => [[:observes_repo_for_class, model_class]],
           :multiple => true,
           :optional => true
@@ -155,7 +155,7 @@ module Persistence::Sequel
       model_class == self.model_class
     end
 
-    # see Persistence::Sequel::RepositoryObserver for the interface you need to expose to be an observer here.
+    # see Hold::Sequel::RepositoryObserver for the interface you need to expose to be an observer here.
     #
     # If you're using Wirer to construct the repository, a better way to hook the repo up with observers is to
     # add RepositoryObservers to the Wirer::Container and have them provide feature [:observes_repo_for_class, model_class].
@@ -215,7 +215,7 @@ module Persistence::Sequel
     # Some helpers
 
     def translate_exceptions(&b)
-      Persistence::Sequel.translate_exceptions(&b)
+      Hold::Sequel.translate_exceptions(&b)
     end
 
     def insert_row_for_entity(entity, table, id=nil)
@@ -410,7 +410,7 @@ module Persistence::Sequel
         if allocates_ids?
           store_new(entity)
         else
-          raise Persistence::MissingIdentity
+          raise Hold::MissingIdentity
         end
       end
       entity
@@ -467,7 +467,7 @@ module Persistence::Sequel
     end
 
     def update(entity, update_entity=entity)
-      id = entity.id or raise Persistence::MissingIdentity
+      id = entity.id or raise Hold::MissingIdentity
       transaction do
         rows = {}; data_from_mappers = {}
         pre_update(entity, update_entity)
@@ -516,7 +516,7 @@ module Persistence::Sequel
     # to that used for inserts by store_new, which in turn is determined by the
     # order of your use_table declarations
     def delete(entity)
-      id = entity.id or raise Persistence::MissingIdentity
+      id = entity.id or raise Hold::MissingIdentity
       transaction do
         pre_delete(entity)
         @property_mappers.each do |name, mapper|

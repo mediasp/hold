@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Maps to an array of associated objects stored in another repo, which has a foreign_key-mapped
   # property pointing at instances of our model class.
   #

@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Simplest case: maps the property directly to a column on the corresponding table.
   class PropertyMapper::Column < PropertyMapper
     attr_reader :column_name, :table, :column_alias, :column_qualified, :columns_aliases_and_tables_for_select

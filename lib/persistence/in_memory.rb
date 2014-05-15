@@ -1,8 +1,8 @@
 require 'set'
 
-module Persistence
+module Hold
 
-  # These are a set of implementations of Persistence interfaces based on in-memory storage.
+  # These are a set of implementations of Hold interfaces based on in-memory storage.
   # They're not threadsafe or for production use, but are here as lightweight implementations to use in
   # tests, and for illustrative purposes.
   module InMemory; end
@@ -10,7 +10,7 @@ module Persistence
   ARG_EMPTY = Object.new.freeze # something different to everything else
 
   class InMemory::Cell
-    include Persistence::Cell
+    include Hold::Cell
 
     # new -- empty
     # new(nil) -- non-empty, value is nil
@@ -37,7 +37,7 @@ module Persistence
   end
 
   class InMemory::ArrayCell
-    include Persistence::ArrayCell
+    include Hold::ArrayCell
 
     def initialize(array=[])
       @array = array
@@ -61,7 +61,7 @@ module Persistence
   end
 
   class InMemory::ObjectCell < InMemory::Cell
-    include Persistence::ObjectCell
+    include Hold::ObjectCell
 
     def get
       @value && @value.dup
@@ -88,7 +88,7 @@ module Persistence
   end
 
   class InMemory::HashRepository
-    include Persistence::HashRepository
+    include Hold::HashRepository
 
     def initialize
       @hash = {}
@@ -113,7 +113,7 @@ module Persistence
   end
 
   class InMemory::SetRepository
-    include Persistence::SetRepository
+    include Hold::SetRepository
 
     def initialize
       @set = Set.new
@@ -137,7 +137,7 @@ module Persistence
   end
 
   class InMemory::IdentitySetRepository
-    include Persistence::IdentitySetRepository
+    include Hold::IdentitySetRepository
 
     def initialize(allocates_ids=false)
       @by_id = {}

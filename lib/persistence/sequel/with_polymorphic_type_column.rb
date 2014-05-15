@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Subclass of Sequel::IdentitySetRepository which adds support for a polymorphic type column which
   # is used to persist the class of the model.
   class IdentitySetRepository::WithPolymorphicTypeColumn < IdentitySetRepository

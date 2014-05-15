@@ -1,4 +1,4 @@
-require 'persistence/interfaces'
+require 'hold/interfaces'
 require 'fileutils'
 
 # A simple HashRepository (ie key/value store implementation) which stores each
@@ -11,11 +11,11 @@ require 'fileutils'
 # * watch out for per-directory file limits.
 #
 # NB: Not threadsafe for writes
-module Persistence
+module Hold
   module File; end
 
   class File::HashRepository
-    include Persistence::HashRepository
+    include Hold::HashRepository
 
     def can_get_class?(klass); klass == String; end
     def can_set_class?(klass); klass == String; end

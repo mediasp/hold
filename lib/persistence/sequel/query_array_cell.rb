@@ -1,6 +1,6 @@
-module Persistence::Sequel
+module Hold::Sequel
   class QueryArrayCell
-    include Persistence::ArrayCell
+    include Hold::ArrayCell
 
     def initialize(repo, *query_args, &query_block)
       @repo, @query_block = repo, query_block

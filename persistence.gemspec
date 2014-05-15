@@ -2,11 +2,11 @@
 lib = File.expand_path('../lib/', __FILE__)
 $:.unshift lib unless $:.include?(lib)
 
-require 'persistence/version'
+require 'hold/version'
 
 spec = Gem::Specification.new do |s|
-  s.name   = "persistence"
-  s.version = Persistence::VERSION
+  s.name   = "hold"
+  s.version = Hold::VERSION
   s.platform = Gem::Platform::RUBY
   s.authors = ['Matthew Willson']
   s.email = ["matthew@playlouder.com"]

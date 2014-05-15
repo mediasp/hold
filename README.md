@@ -1,4 +1,4 @@
-# Persistence
+# Hold
 
 A ruby library geared towards separating persistence concerns from data model classes.
 
@@ -8,7 +8,7 @@ If you want to dive in and write some code to get a feel for the library, take a
 
 ## An Introduction
 
-The persistence library contains a set of interfaces for, and implementations of, the [http://martinfowler.com/eaaCatalog/repository.html](Repository pattern) in Ruby.
+The hold library contains a set of interfaces for, and implementations of, the [http://martinfowler.com/eaaCatalog/repository.html](Repository pattern) in Ruby.
 
 To summarize, the idea is that
 
@@ -44,9 +44,9 @@ One other thing which it might be worth adding interfaces for is transactionalit
 
 Would be worth doing a review of the interface design here once we have some more implementations going, to see what works and what doesn't, what needs adjusting etc.
 
-### Persistence::Cell
+### Hold::Cell
 
-This is pretty much the simplest persistence interface possible. It represents a 'cell' in which a single item of data can be stored; the cell responds to 'get' and 'set' which do the obvious with respect to the data stored in it.
+This is pretty much the simplest hold interface possible. It represents a 'cell' in which a single item of data can be stored; the cell responds to 'get' and 'set' which do the obvious with respect to the data stored in it.
 
 #### Empty Cells
 
@@ -54,33 +54,33 @@ Cells may optionally support being in an 'empty' state, ie a state where no data
 
 This allows distinctions to be drawn between e.g. "present in the hash but set to nil" and "not present in the hash", or "loaded and known to be nil" vs "not loaded", which are quite common distinctions to be found in data structures used for persistence.
 
-### Persistence::ObjectCell
+### Hold::ObjectCell
 
 An ObjectCell is a Cell which stores Objects with named properties. Ontop of the Cell interface, it also supports getting and setting the values of individual properties of the object contained with it, via get_property and set_property. (It can also support properties being empty/missing, via clear_property and has_property?)
 
 You can ask it for a property_cell, which will return you a Cell wrapping a particular property of the object contained within it.
 
-### Persistence::ArrayCell
+### Hold::ArrayCell
 
 A Cell which stores an ordered collection of values, and also supports random access to them via get_slice, and getting of the length of the collection via get_length.
 
-### Persistence::HashRepository
+### Hold::HashRepository
 
 A Hash-like interface for a simple key-value store, which can get and set objects by a key. get_with_key / set_with_key / has_key? / clear_key. May also support an optimised get_many_with_keys to get multiple keys at once, for which a default implementation is supplied.
 
-### Persistence::SetRepository
+### Hold::SetRepository
 
 Interface for a store which contains a set of values. Supports adding (store) and removing (delete) them, membership test (contains?) and potentially iteration over all the values in the store (get_all). But doesn't necessarily support any kind of indexed lookup.
 
-### Persistence::IdentitySetRepository
+### Hold::IdentitySetRepository
 
 A SetRepository which stores objects with identity (so Entities rather than just Value objects). In addition to the SetRepository interface it supports lookup of objects by their ID. Given that objects have identities which are independent of their values, it then makes sense to talk about 'updating' an object in the store, i.e. replacing it with an updated version with the same identity. This corresponds well to the common "database table with a primary key" type model.
 
-IdentitySetRepository implementations may well add support for various other kinds of indexed lookup, although we haven't fully formalised interfaces for these, maybe look at how Persistence::Sequel::IdentitySetRepository does it for now.
+IdentitySetRepository implementations may well add support for various other kinds of indexed lookup, although we haven't fully formalised interfaces for these, maybe look at how Hold::Sequel::IdentitySetRepository does it for now.
 
 ## In-memory implementations
 
-For each of the above interfaces, there's a corresponding in-memory implementation in Persistence::InMemory.
+For each of the above interfaces, there's a corresponding in-memory implementation in Hold::InMemory.
 
 These are intended to illustrate how the interface is intended to work, and to be useful for testing purposes if you want an alternative in-memory mock implementation of some repository in order to avoid a dependency on a database.
 
@@ -90,15 +90,15 @@ They're quite simple, not really intended for production use, and not designed t
 
 A common way of persisting objects is to serialize them into a string, and then persist that string somewhere (in a key-value store, as a file on disk...).
 
-Persistence::Serialized::HashRepository and Persistence::Serialized::IdentitySetRepository provide implementations of these interfaces which serialize and deserialize the object to/from a string, before/after persisting them in an underlying string-based HashRepository. You need to pass it this underlying store, and a serializer, e.g. Persistence::Serialized::JSONSerializer.
+Hold::Serialized::HashRepository and Hold::Serialized::IdentitySetRepository provide implementations of these interfaces which serialize and deserialize the object to/from a string, before/after persisting them in an underlying string-based HashRepository. You need to pass it this underlying store, and a serializer, e.g. Hold::Serialized::JSONSerializer.
 
 ## Sequel-backed persistence
 
-This is the biggest implementation of Persistence::IdentitySetRepository, and is done ontop of the database connection facilities and SQL-building DSL of the excellent Sequel library.
+This is the biggest implementation of Hold::IdentitySetRepository, and is done ontop of the database connection facilities and SQL-building DSL of the excellent Sequel library.
 
 It's essentially a mini ORM, but, unlike other Ruby ORMs, is based on the Repository pattern instead of an ActiveRecord-style approach; meaning you will have separate repository classes and data model classes. The nearest things you might compare it with might be Hibernate in the Java world, or SQLAlchemy in the Python, although it's not trying to be quite as fully-featured as these. In particular it doesn't have the concept of a "session" or "unit of work", and it's not quite so clever about persisting changes to large object graphs all in one go. (These might be useful additions at some point, but would take some care to do well).
 
-Here follows a selection of the core features of Persistence::Sequel, with some usage examples in each case.
+Here follows a selection of the core features of Hold::Sequel, with some usage examples in each case.
 
 For this I'll use the following schema:
 
@@ -131,7 +131,7 @@ There is a class-based DSL which is used to configure a new repository class. Th
 ``` ruby
     Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal)
 
-    class AuthorRepository < Persistence::Sequel::IdentitySetRepository
+    class AuthorRepository < Hold::Sequel::IdentitySetRepository
       set_model_class Author
       use_table :authors, :id_sequence => true
       map_column :title
@@ -222,7 +222,7 @@ Note: one case where `store` may be preferable is if you have `:id_sequence => f
 
 ### Property mappers
 
-Persistence::Sequel::IdentitySetRepository is designed to be quite extensible in the way it maps different properties of the objects it persists. The property mapper used in the example above is Persistence::Sequel::PropertyMapper::Column (`map_column :foo` is just shorthand for `map_property :foo, Persistence::Sequel::PropertyMapper::Column`), but there are various other property mappers available as we'll see, and it's possible to write your own too.
+Hold::Sequel::IdentitySetRepository is designed to be quite extensible in the way it maps different properties of the objects it persists. The property mapper used in the example above is Hold::Sequel::PropertyMapper::Column (`map_column :foo` is just shorthand for `map_property :foo, Hold::Sequel::PropertyMapper::Column`), but there are various other property mappers available as we'll see, and it's possible to write your own too.
 
 To summarize the mechanics of it: a repository has a PropertyMapper instance for each property it maps, this is a single static instance which doesn't have any mutable state. The repository calls upon the property mapper at various points during CRUD operations, passing it the relevant model instance. This allows you to hook into the repository internals at various stages in order to implement different behaviours for how a property is CRUDed.
 
@@ -274,7 +274,7 @@ An example is in order (continuing on from our examples the AuthorRepository abo
 
     Book = ThinModels::StructWithIdentity(:title, :author)
 
-    class BookRepository < Persistence::Sequel::IdentitySetRepository
+    class BookRepository < Hold::Sequel::IdentitySetRepository
       set_model_class Book
       use_table :books, :id_sequence => true
       map_column :title
@@ -296,7 +296,7 @@ Then we can e.g.:
     > book.author
      => #<Author:0x1018d6f10 lazy, @values={:title=>"foo", :fave_breakfast_cereal=>nil, :id=>1}>
 
-Note: with this approach, you have to set the target_repo on the BookRepository's author property mapper, so that it knows how to load authors. Doing this wiring up gets a bit clunky if you have more than a handful of interconnected repositories; the good news is that Persistence::IdentitySetRepository supports the use of the Wirer dependency injection library to do all the wiring-up in these cases, see the section later on.
+Note: with this approach, you have to set the target_repo on the BookRepository's author property mapper, so that it knows how to load authors. Doing this wiring up gets a bit clunky if you have more than a handful of interconnected repositories; the good news is that Hold::IdentitySetRepository supports the use of the Wirer dependency injection library to do all the wiring-up in these cases, see the section later on.
 
 There are some options: as with map_column you can override the name of the database column used for the foreign key:
 
@@ -334,7 +334,7 @@ This is for classic one to many associations, like one Author has many Books. To
 ``` ruby
     Author = ThinModels::StructWithIdentity(:title, :fave_breakfast_cereal, :books)
 
-    class AuthorRepository < Persistence::Sequel::IdentitySetRepository
+    class AuthorRepository < Hold::Sequel::IdentitySetRepository
       # ...
       map_one_to_many :books, :model_class => Book, :property => :author
     end
@@ -541,7 +541,7 @@ As it stands, you need to make your model class a subclass of ThinModels::Struct
 
 When you start decoupling things like repositories from the model classes, it becomes more of a challenge to wire up a graph of repositories for different classes, since they may need to know about eachother in order to load associations, and they can't just find eachother in the global scope as is the case with ActiveRecord classes.
 
-You can wire them up yourself if you want, but Persistence::Sequel also supports the use of Wirer, a dependency injection library, to wire up repositories. It's recommended to use this if the data model you're persisting has more than a handful of inter-related object types, as it would be quite a pain to do it manually. If you choose to use Wirer you'll find that subclasses of Persistence::Sequel::IdentitySetRepository automatically expose the Wirer::Factory::Interface required for them to be added into a container and hooked up with their dependencies.
+You can wire them up yourself if you want, but Hold::Sequel also supports the use of Wirer, a dependency injection library, to wire up repositories. It's recommended to use this if the data model you're persisting has more than a handful of inter-related object types, as it would be quite a pain to do it manually. If you choose to use Wirer you'll find that subclasses of Hold::Sequel::IdentitySetRepository automatically expose the Wirer::Factory::Interface required for them to be added into a container and hooked up with their dependencies.
 
 ### Extensible PropertyMapper interface
 
@@ -564,10 +564,10 @@ In no particular order:
 - Overall tidyup of (and better test coverage for) the Sequel code
 - Some performance optimisations for Sequel repositories, in particular to the way lazy loading works, and avoiding unnecessary queries when traversing an object graph.
 - Formalising some concept of the schema of ruby objects which repositories are designed to persist
-- Database-backed implementations of other simpler Persistence interfaces like HashRepository, SetRepository and ArrayCell
+- Database-backed implementations of other simpler Hold interfaces like HashRepository, SetRepository and ArrayCell
 - Support for Identity Map and Unit of Work patterns (a biggie)
-- Implementations of the Persistence interfaces for some NoSQL datastores (e.g. Redis would be nice)
+- Implementations of the Hold interfaces for some NoSQL datastores (e.g. Redis would be nice)
 - Porting across some more featureful and robust disk-backed implementations of the repository interfaces, making it a no-brainer to use config-file-backed persistence
 - Proper support for the use of non-Sequel repositories together with foreign_key mappers, so e.g. you could have it load a licensor from a licensor config file based on a licensor_id column in the database. The property mappers were designed with this sort of capability in mind but a bit more work needs doing on it.
 - Perhaps extend the property mapper concept to non-sequel-backed repositories too; in the process seeing if more could be done to unify the way property mappers work with the way repositories expose object cells, and object cells expose property cells.
-- Better-thought-out support in the persistence interfaces for reflection to discover the types of objects which can be persisted in a particular cell/repository/etc. This has been done to an extent but was a bit of a rush job. Perhaps would be nice to implement this via optional support for some kind of schema library. A good approach to this might also help to pin down in a tidy precise way how repositories ought to behave in the presence of polymorphism and subclassing.
+- Better-thought-out support in the hold interfaces for reflection to discover the types of objects which can be persisted in a particular cell/repository/etc. This has been done to an extent but was a bit of a rush job. Perhaps would be nice to implement this via optional support for some kind of schema library. A good approach to this might also help to pin down in a tidy precise way how repositories ought to behave in the presence of polymorphism and subclassing.

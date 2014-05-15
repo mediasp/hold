@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # Abstract superclass.
   # Responsibility of a PropertyMapper is to map data for a particular property of a model class, between the
   # instances of that model class, and the database
@@ -92,12 +92,12 @@ module Persistence::Sequel
     # used to make a sequel filter condition setting relevant columns equal to values equivalent
     # to the given property value. May raise if mapper doesn't support this
     def make_filter(value, columns_mapped_to)
-      raise Persistence::UnsupportedOperation
+      raise Hold::UnsupportedOperation
     end
 
     # As for make_filter but takes multiple possible values and does a column IN (1,2,3,4) type thing.
     def make_multi_filter(values, columns_mapped_to)
-      raise Persistence::UnsupportedOperation
+      raise Hold::UnsupportedOperation
     end
 
     # like load_value, but works in a batched fashion, allowing a batched loading strategy to

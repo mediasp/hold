@@ -1,7 +1,7 @@
-require 'persistence/serialized'
+require 'hold/serialized'
 require 'json'
 
-class Persistence::Serialized::JSONSerializer
+class Hold::Serialized::JSONSerializer
   def serialize(entity)
     entity.to_json
   end

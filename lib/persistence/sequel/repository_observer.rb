@@ -1,13 +1,13 @@
-# If you want to observe events on a Persistence::Sequel::IdentitySetRepository
+# If you want to observe events on a Hold::Sequel::IdentitySetRepository
 # you need to implement this interface. Stubs supplied here to save you some
 # boilerplate in case you only care about certain events.
 #
 # The callback methods correspond to their counterparts on
-# Persistence::Sequel::IdentityHashRepository but with an added argument
+# Hold::Sequel::IdentityHashRepository but with an added argument
 # passing the repository instance.
 #
 # TODO: generalise this to SetRepositories in general
-module Persistence::Sequel::RepositoryObserver
+module Hold::Sequel::RepositoryObserver
   def pre_insert(repo, entity)
   end
 

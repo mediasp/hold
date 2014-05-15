@@ -1,4 +1,4 @@
-module Persistence::Sequel
+module Hold::Sequel
   # A column mapper which allows you to supply a customized pair of transformations
   # between the sequel values persisted in the db, and the values used for the outward-facing
   # model property

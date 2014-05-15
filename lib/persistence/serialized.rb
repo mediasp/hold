@@ -1,6 +1,6 @@
-require 'persistence/interfaces'
+require 'hold/interfaces'
 
-module Persistence
+module Hold
 
   module Serialized; end
 
@@ -12,7 +12,7 @@ module Persistence
   # May optionally have a 'key_prefix', which is a prefixed namespace added to the cache keys
   # before getting/setting the serialized values in the underlying cache.
   class Serialized::HashRepository
-    include Persistence::HashRepository
+    include Hold::HashRepository
 
     attr_reader :cache, :serializer, :key_prefix
 
@@ -50,7 +50,7 @@ module Persistence
   end
 
   class Serialized::IdentitySetRepository
-    include Persistence::IdentitySetRepository
+    include Hold::IdentitySetRepository
 
     attr_reader :cache, :serializer, :key_prefix
 
