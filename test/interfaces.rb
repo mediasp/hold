@@ -1,17 +1,17 @@
 require_relative 'helpers'
-require_relative '../lib/persistence/interfaces'
+require_relative '../lib/hold/interfaces'
 require 'thin_models/struct/identity'
 
-module PersistenceTestHelpers
+module HoldTestHelpers
   def void_where_unsupported
     yield
     true
-  rescue Persistence::UnsupportedOperation
+  rescue Hold::UnsupportedOperation
     false
   end
 end
 
-describe_shared 'Persistence::Cell' do
+describe_shared 'Hold::Cell' do
   def make_cell
     # Some::Cell.new
   end
@@ -20,8 +20,8 @@ describe_shared 'Persistence::Cell' do
     # some data to try storing inside the cell, based on the arg
   end
 
-  include PersistenceTestHelpers
-  describe 'in its implementation of Persistence::Cell', self do
+  include HoldTestHelpers
+  describe 'in its implementation of Hold::Cell', self do
     def setup
       @cell = make_cell
     end
@@ -69,8 +69,8 @@ describe_shared 'Persistence::Cell' do
   end
 end
 
-describe_shared "Persistence::ArrayCell" do
-  behaves_like "Persistence::Cell"
+describe_shared "Hold::ArrayCell" do
+  behaves_like "Hold::Cell"
 
   # should make an instance of the relevant ArrayCell class
   def make_cell
@@ -81,7 +81,7 @@ describe_shared "Persistence::ArrayCell" do
     [data]
   end
 
-  describe 'in its implementation of Persistence::ArrayCell', self do
+  describe 'in its implementation of Hold::ArrayCell', self do
     def setup
       @cell = make_cell
     end
@@ -116,8 +116,8 @@ describe_shared "Persistence::ArrayCell" do
   end
 end
 
-describe_shared 'Persistence::ObjectCell' do
-  behaves_like 'Persistence::Cell'
+describe_shared 'Hold::ObjectCell' do
+  behaves_like 'Hold::Cell'
   def make_cell
     # Some::ObjectCell.new
   end
@@ -126,7 +126,7 @@ describe_shared 'Persistence::ObjectCell' do
     { foo: data }
   end
 
-  describe 'in its implementation of Persistence::ObjectCell', self do
+  describe 'in its implementation of Hold::ObjectCell', self do
     def setup
       @cell = make_cell
     end
@@ -189,7 +189,7 @@ describe_shared 'Persistence::ObjectCell' do
     end
 
     describe 'its property_cell for a property', self do
-      behaves_like 'Persistence::Cell'
+      behaves_like 'Hold::Cell'
 
       def make_cell
         cell = super
@@ -204,7 +204,7 @@ describe_shared 'Persistence::ObjectCell' do
   end
 end
 
-describe_shared 'Persistence::HashRepository' do
+describe_shared 'Hold::HashRepository' do
   # should make a HashRepository with integer keys and whatever values you
   # like provided you implement make_test_value to make suitable values
   def make_hash_repo
@@ -217,7 +217,7 @@ describe_shared 'Persistence::HashRepository' do
     data
   end
 
-  describe 'in its implementation of Persistence::HashRepository', self do
+  describe 'in its implementation of Hold::HashRepository', self do
     def setup
       @repository = make_hash_repo
     end
@@ -268,7 +268,7 @@ describe_shared 'Persistence::HashRepository' do
   end
 end
 
-describe_shared "Persistence::SetRepository" do
+describe_shared "Hold::SetRepository" do
   def make_set_repo
     # ...
   end
@@ -277,9 +277,9 @@ describe_shared "Persistence::SetRepository" do
     data
   end
 
-  include PersistenceTestHelpers
+  include HoldTestHelpers
 
-  describe 'in its implementation of Persistence::SetRepository', self do
+  describe 'in its implementation of Hold::SetRepository', self do
     def setup
       @repository = make_set_repo
     end
@@ -321,7 +321,7 @@ describe_shared "Persistence::SetRepository" do
     it 'should not allow store_new to replace existing' do
       entity = make_set_repo_test_value(123)
       @repository.store(entity)
-      assert_raise(Persistence::IdentityConflict) do
+      assert_raise(Hold::IdentityConflict) do
         @repository.store_new(entity)
       end
     end
@@ -354,8 +354,8 @@ end
 
 AbcDef = ThinModels::StructWithIdentity(:abc, :def)
 
-describe_shared "Persistence::IdentitySetRepository" do
-  behaves_like "Persistence::SetRepository"
+describe_shared "Hold::IdentitySetRepository" do
+  behaves_like "Hold::SetRepository"
 
   def make_set_repo
     make_id_set_repo
@@ -375,9 +375,9 @@ describe_shared "Persistence::IdentitySetRepository" do
     AbcDef.new(props)
   end
 
-  include PersistenceTestHelpers
+  include HoldTestHelpers
 
-  describe 'in its implementation of Persistence::IdentitySetRepository', self do
+  describe 'in its implementation of Hold::IdentitySetRepository', self do
     def setup
       @repository = make_id_set_repo
     end
@@ -423,7 +423,7 @@ describe_shared "Persistence::IdentitySetRepository" do
       @repository.store(entity)
       assert_equal 'foo', @repository.get_by_id(1).abc
       entity = make_entity(id: 1, abc: 'bar')
-      assert_raise(Persistence::IdentityConflict) do
+      assert_raise(Hold::IdentityConflict) do
         @repository.store_new(entity)
       end
     end
@@ -495,7 +495,7 @@ describe_shared "Persistence::IdentitySetRepository" do
       assert !@repository.contains_id?(1)
     end
 
-    it "should update a property of a stored entity via set_property-ing the entity's persistence cell in this repo" do
+    it "should update a property of a stored entity via set_property-ing the entity's hold cell in this repo" do
       entity = make_entity(id: 1, abc: 'foo', def: 'bar')
       @repository.store(entity)
       @repository.cell(entity).set_property(:abc, 'updated!')
@@ -505,7 +505,7 @@ describe_shared "Persistence::IdentitySetRepository" do
       assert_equal 'bar', after.def
     end
 
-    it "should get a property of a stored entity via get_property-ing the entity's persistence cell in this repo" do
+    it "should get a property of a stored entity via get_property-ing the entity's hold cell in this repo" do
       entity = make_entity(id: 1, abc: 'foo', def: 'bar')
       @repository.store(entity)
       assert_equal 'foo', @repository.cell(entity).get_property(:abc)

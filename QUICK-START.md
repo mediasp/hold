@@ -27,8 +27,8 @@ OK, First you have your model.  We (currently) rely on a library called thin_mod
 Next we want to store jane in a database.  We create a table and a repository instance.
 
     require 'sqlite3'
-    require 'persistence'
-    require 'persistence/sequel'
+    require 'hold'
+    require 'hold/sequel'
 
     db = Sequel.connect('sqlite://authors.db')
 
@@ -40,7 +40,7 @@ Next we want to store jane in a database.  We create a table and a repository in
     end
 
     # Repositories are where you put your data and where you can get it from later
-    class AuthorRepository < Persistence::Sequel::IdentitySetRepository
+    class AuthorRepository < Hold::Sequel::IdentitySetRepository
       set_model_class Author
       use_table :authors, :id_sequence => true
       map_column :title
@@ -89,7 +89,7 @@ Now we're going to add an association.  Let's throw some books in to the model.
       integer     :author_id
     end
 
-    class BookRepository < Persistence::Sequel::IdentitySetRepository
+    class BookRepository < Hold::Sequel::IdentitySetRepository
       set_model_class Book
       use_table :books, :id_sequence => true
       map_column :title
