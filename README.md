@@ -1,4 +1,5 @@
-![Build Status](https://travis-ci.org/mediasp/hold.svg?branch=master)
+[![Build Status](https://travis-ci.org/mediasp/hold.svg?branch=master)](https://travis-ci.org/mediasp/hold)
+[![Gem Version](https://badge.fury.io/rb/hold.svg)](http://badge.fury.io/rb/hold)
 # Hold
 
 A ruby library geared towards separating persistence concerns from data model classes.
