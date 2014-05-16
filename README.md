@@ -1,5 +1,4 @@
 ![Build Status](https://travis-ci.org/mediasp/hold.svg?branch=master)
-
 # Hold
 
 A ruby library geared towards separating persistence concerns from data model classes.
