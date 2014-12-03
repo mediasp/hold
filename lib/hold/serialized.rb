@@ -86,10 +86,13 @@ module Hold
 
     def get_by_id(id)
       json = @cache.get_with_key(cache_key(id))
-      string_hash = @serializer.deserialize(json)
-      string_hash = string_hash.inject({}){|memo,(k,v)|
-        memo[k.to_sym] = v; memo
-      }
+      if json
+        string_hash = @serializer.deserialize(json)
+        string_hash.inject({}) do |memo, (k,v)|
+          memo[k.to_sym] = v
+          memo
+        end
+      end
     end
 
     def delete_id(id)
@@ -99,6 +102,5 @@ module Hold
     def contains_id?(id)
       @cache.has_key?(cache_key(id))
     end
-
   end
 end
