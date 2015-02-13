@@ -4,12 +4,12 @@ $:.unshift lib unless $:.include?(lib)
 
 require 'hold/version'
 
-spec = Gem::Specification.new do |s|
+Gem::Specification.new do |s|
   s.name   = "hold"
   s.version = Hold::VERSION
   s.platform = Gem::Platform::RUBY
-  s.authors = ['Matthew Willson', 'Nick Griffiths']
-  s.email = ["mark@mediasp.com", "tom@mediasp.com", "devs@mediasp.com"]
+  s.authors = ['MSP Devs']
+  s.email = ['devs@mediasp.com']
   s.summary = 'A library geared towards separating persistence concerns from data model classes'
   s.description = <<-DESC
   A persistence library based more closely on the repository model.
@@ -24,6 +24,12 @@ DESC
   s.add_development_dependency('mocha', '~> 0.7')
   s.add_development_dependency('json')
   s.add_development_dependency('sqlite3')
+
+  s.add_development_dependency('pronto')
+  s.add_development_dependency('pronto-rubocop')
+  s.add_development_dependency('pronto-flay')
+  s.add_development_dependency('pronto-reek')
+
   s.add_dependency('sequel', '~> 3')
   s.add_dependency('wirer', '>= 0.4.0')
   s.add_dependency('thin_models', '~> 0.1.4')
