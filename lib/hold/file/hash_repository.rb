@@ -1,19 +1,21 @@
 require 'hold/interfaces'
 require 'fileutils'
 
-# A simple HashRepository (ie key/value store implementation) which stores each
-# key in a separate file.
-#
-# * Keys must be suitable pathnames
-# * Values must be strings
-# * base_path should end with a /, or keys should start with a /, one or the other
-# * subdirectories will be created as required if the keys contain path separators
-# * watch out for per-directory file limits.
-#
-# NB: Not threadsafe for writes
 module Hold
   module File; end
 
+  # A simple HashRepository (ie key/value store implementation) which stores each
+  # key in a separate file.
+  #
+  # * Keys must be suitable pathnames
+  # * Values must be strings
+  # * base_path should end with a /, or keys should start with a /, one or the
+  #   other
+  # * subdirectories will be created as required if the keys contain path
+  #   separators
+  # * watch out for per-directory file limits.
+  #
+  # NB: Not threadsafe for writes
   class File::HashRepository
     include Hold::HashRepository
 

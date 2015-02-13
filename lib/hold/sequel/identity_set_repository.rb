@@ -367,15 +367,8 @@ module Hold::Sequel
     end
 
     def get_by_property(property, value, options={})
-      properties_to_fetch ||= @default_properties.dup
-      properties_to_fetch[property] = true
-      query(options[:properties]) do |dataset, property_columns|
-        filter = mapper(property).make_filter(value, property_columns[property])
-        dataset.filter(filter)
-      end.single_result
+      get_many_by_property(property, value, options).first
     end
-
-
 
     def contains_id?(id)
       dataset = dataset_to_select_tables(@main_table)

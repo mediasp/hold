@@ -1,12 +1,6 @@
 require 'thin_models/lazy_array'
 
 module Hold
-  class Error < ::RuntimeError; end
-  class UnsupportedOperation < Error; end
-  class EmptyConflict < Error; end
-  class IdentityConflict < Error; end
-  class MissingIdentity < Error; end
-
   # A set of interfaces for persistence based around an object model.
   #
   # We're expected to use various implementations of these interfaces,

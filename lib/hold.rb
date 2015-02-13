@@ -1,6 +1,8 @@
-require_relative 'hold/interfaces'
-require_relative 'hold/file/hash_repository'
-require_relative 'hold/sequel'
+require 'hold/interfaces'
+require 'hold/file/hash_repository'
+require 'hold/sequel'
+
+require 'hold/error'
 
 # Top level namespace
 module Hold

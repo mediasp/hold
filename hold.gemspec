@@ -21,7 +21,7 @@ DESC
   s.add_development_dependency('rake')
   s.add_development_dependency('test-unit', '~> 1.2')
   s.add_development_dependency('test-spec')
-  s.add_development_dependency('mocha', '~> 0.7')
+  s.add_development_dependency('mocha', '~> 0.13.0')
   s.add_development_dependency('json')
   s.add_development_dependency('sqlite3')
 
