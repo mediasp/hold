@@ -57,10 +57,10 @@ module Hold
         end
       end
 
-      def has_key?(key)
+      def key?(key)
         ::File.exist?(path_to_key(key))
       end
-      alias_method :key?, :has_key?
+      alias_method :has_key?, :key?
     end
   end
 end
