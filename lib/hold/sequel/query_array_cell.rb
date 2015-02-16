@@ -1,21 +1,26 @@
-module Hold::Sequel
-  class QueryArrayCell
-    include Hold::ArrayCell
+module Hold
+  module Sequel
+    # Query an array cell
+    class QueryArrayCell
+      include Hold::ArrayCell
 
-    def initialize(repo, *query_args, &query_block)
-      @repo, @query_block = repo, query_block
-    end
+      def initialize(repo, *_query_args, &query_block)
+        @repo, @query_block = repo, query_block
+      end
 
-    def get(properties=nil)
-      @repo.query(properties, &@query_block).to_a
-    end
+      def get(properties = nil)
+        @repo.query(properties, &@query_block).to_a
+      end
 
-    def get_slice(start, length, properties=nil)
-      @repo.query(properties, &@query_block).to_a(true)[start, length]
-    end
+      def slice(start, length, properties = nil)
+        @repo.query(properties, &@query_block).to_a(true)[start, length]
+      end
+      alias_method :get_slice, :slice
 
-    def get_length
-      Query.new(@repo, [], &@query_block).to_a(true).length
+      def length
+        Query.new(@repo, [], &@query_block).to_a(true).length
+      end
+      alias_method :get_length, :length
     end
   end
 end
