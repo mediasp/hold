@@ -5,6 +5,7 @@ require 'hold/in_memory/hash_repository'
 require 'hold/in_memory/set_repository'
 require 'hold/in_memory/identity_set_repository'
 
+# namespace module
 module Hold
   # These are a set of implementations of Hold interfaces based on in-memory
   # storage.  They're not threadsafe or for production use, but are here as
