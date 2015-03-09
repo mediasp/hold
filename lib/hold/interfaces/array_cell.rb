@@ -25,8 +25,8 @@ module Hold
 
     # Can override to indicate if you only support getting/setting arrays with
     # items of a particular class or classes:
-    def can_get_item_class?(klass); true; end
-    def can_set_item_class?(klass); true; end
+    def can_get_item_class?(_); true; end
+    def can_set_item_class?(_); true; end
 
     class LazyArray < ThinModels::LazyArray::Memoized
       def initialize(array_cell)

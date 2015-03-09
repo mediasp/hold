@@ -61,7 +61,7 @@ module Hold::Sequel
       end
     end
 
-    def load_value(row, id, properties=nil)
+    def load_value(_row, id, properties=nil)
       properties = (properties || target_repo.default_properties).merge(@extra_properties)
       target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_id(id, mapping[@foreign_key_property_name])
@@ -71,7 +71,7 @@ module Hold::Sequel
       end.to_a
     end
 
-    def load_values(rows, ids=nil, properties=nil, &b)
+    def load_values(_rows, ids=nil, properties=nil, &b)
       properties = (properties || target_repo.default_properties).merge(@extra_properties)
       query = target_repo.query(properties) do |dataset, mapping|
         filter = foreign_key_mapper.make_filter_by_ids(ids, mapping[@foreign_key_property_name])
@@ -117,13 +117,13 @@ module Hold::Sequel
     end
 
 
-    def build_insert_row(entity, table, row, id=nil)
+    def build_insert_row(entity, table, row, _id=nil)
       return unless @denormalized_count_column && table == @repository.main_table
       values = entity[@property_name]
       row[@denormalized_count_column] = (values ? values.length : 0)
     end
 
-    def post_insert(entity, rows, insert_id)
+    def post_insert(entity, _rows, _insert_id)
       return unless @writeable
 
       values = entity[@property_name] or return
@@ -170,12 +170,12 @@ module Hold::Sequel
       load_value(nil, entity.id) if @writeable && update_entity[@property_name]
     end
 
-    def build_update_row(entity, table, row, id=nil)
+    def build_update_row(entity, table, row, _id=nil)
       return unless @denormalized_count_column && table == @repository.main_table
       values = entity[@property_name] and row[@denormalized_count_column] = values.length
     end
 
-    def post_update(entity, update_entity, rows, values_before)
+    def post_update(entity, update_entity, _rows, values_before)
       return unless @writeable
       update_values = update_entity[@property_name] or return
       # delete any values which are no longer around:

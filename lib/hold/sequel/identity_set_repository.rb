@@ -41,7 +41,7 @@ module Hold::Sequel
         [[:get_class, model_class]]
       end
 
-      def setter_dependencies(instance=nil)
+      def setter_dependencies
         dependencies = {:observers => Wirer::Dependency.new(
           :module   => Hold::Sequel::RepositoryObserver,
           :features => [[:observes_repo_for_class, model_class]],
@@ -226,7 +226,7 @@ module Hold::Sequel
       row
     end
 
-    def update_row_for_entity(id, update_entity, table)
+    def update_row_for_entity(update_entity, table)
       row = {}
       @property_mappers.each_value do |mapper|
         mapper.build_update_row(update_entity, table, row)
@@ -236,7 +236,7 @@ module Hold::Sequel
 
     public
 
-    def construct_entity(property_hash, row=nil)
+    def construct_entity(property_hash, _=nil)
       # new_skipping_checks is supported by ThinModels::Struct(::Typed) and skips any type checks or
       # attribute name checks on the supplied attributes.
       @model_class_new_method ||= model_class.respond_to?(:new_skipping_checks) ? :new_skipping_checks : :new
@@ -468,7 +468,7 @@ module Hold::Sequel
           data_from_mappers[name] = mapper.pre_update(entity, update_entity)
         end
         @tables.each do |table|
-          row = update_row_for_entity(id, update_entity, table)
+          row = update_row_for_entity(update_entity, table)
           unless row.empty?
             id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[table]])
             translate_exceptions {@db[table].filter(id_filter).update(row)}

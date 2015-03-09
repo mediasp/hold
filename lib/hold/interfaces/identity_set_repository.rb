@@ -27,11 +27,6 @@ module Hold
       false
     end
 
-    # Looks up a persisted object by the value of its identity property
-    def get_by_id(id)
-      raise UnsupportedOperation
-    end
-
     # deletes the object with the given identity where it exists in the repo
     def delete_id(id)
       delete(get_by_id(id))

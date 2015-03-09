@@ -22,7 +22,7 @@ module Hold::Sequel
         Sequel.as(@foreign_key,:id))
     end
 
-    def load_value(_row=nil, id=nil, properties=nil)
+    def load_value(_row=nil, id=nil, _properties=nil)
       result = {}
       @select_kv.filter(@foreign_key => id).each do |row|
         result[row[:key]] = row[:value]
@@ -30,7 +30,7 @@ module Hold::Sequel
       result
     end
 
-    def load_values(rows=nil, ids=nil, properties=nil, &block)
+    def load_values(_rows=nil, ids=nil, _properties=nil, &block)
       results = Hash.new {|h,k| h[k]={}}
       @select_all.filter(@foreign_key => ids).each do |row|
         results[row[:id]][row[:key]] = row[:value]
@@ -42,14 +42,14 @@ module Hold::Sequel
       @dataset.filter(@foreign_key => entity.id).delete
     end
 
-    def post_insert(entity, rows, last_insert_id=nil)
+    def post_insert(entity, _rows, last_insert_id=nil)
       hash = entity[@property_name] or return
       @dataset.multi_insert(hash.map do |k,v|
         {@foreign_key => last_insert_id, @key_column => k, @value_column => v}
       end)
     end
 
-    def post_update(entity, update_entity, rows, data_from_pre_update)
+    def post_update(entity, update_entity, _rows, _data_from_pre_update)
       hash = update_entity[@property_name] or return
       @dataset.filter(@foreign_key => entity.id).delete
       @dataset.multi_insert(hash.map do |k,v|

@@ -32,7 +32,7 @@ module Hold::Sequel
       @model_class = options[:model_class] or raise ArgumentError
     end
 
-    def load_value(row, id=nil, properties=nil)
+    def load_value(row, _id=nil, properties=nil)
       fkey = row[@column_alias] and target_repo.get_by_id(fkey, :properties => properties)
     end
 
@@ -50,11 +50,11 @@ module Hold::Sequel
       ensure_value_has_id_where_present(entity[@property_name])
     end
 
-    def pre_update(entity, update_entity)
+    def pre_update(_entity, update_entity)
       ensure_value_has_id_where_present(update_entity[@property_name])
     end
 
-    def build_insert_row(entity, table, row, id=nil)
+    def build_insert_row(entity, table, row, _id=nil)
       if @table == table && entity.has_key?(@property_name)
         value = entity[@property_name]
         row[@column_name] = value && value.id
@@ -65,24 +65,24 @@ module Hold::Sequel
     # for now ignoring the columns_mapped_to, since Identity mapper is the only one
     # for which this matters at present
 
-    def make_filter(value, columns_mapped_to=nil)
+    def make_filter(value, _columns_mapped_to=nil)
       {@column_qualified => value && value.id}
     end
 
-    def make_multi_filter(values, columns_mapped_to=nil)
+    def make_multi_filter(values, _columns_mapped_to=nil)
       {@column_qualified => values.map {|v| v.id}}
     end
 
-    def make_filter_by_id(id, columns_mapped_to=nil)
+    def make_filter_by_id(id, _columns_mapped_to=nil)
       {@column_qualified => id}
     end
 
-    def make_filter_by_ids(ids, columns_mapped_to=nil)
+    def make_filter_by_ids(ids, _columns_mapped_to=nil)
       {@column_qualified => ids}
     end
 
     # efficient batch load which takes advantage of get_many_by_ids on the target repo
-    def load_values(rows, ids=nil, properties=nil, &b)
+    def load_values(rows, _ids=nil, properties=nil)
       fkeys = rows.map {|row| row[@column_alias]}
       non_nil_fkeys = fkeys.compact
       non_nil_fkey_results = if non_nil_fkeys.empty?

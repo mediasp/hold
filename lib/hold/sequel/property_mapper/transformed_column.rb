@@ -17,21 +17,21 @@ module Hold::Sequel
       @from_sequel.call(value)
     end
 
-    def load_value(row, id=nil, properties=nil)
+    def load_value(row, _id=nil, _properties=nil)
       from_sequel(row[@column_alias])
     end
 
-    def build_insert_row(entity, table, row, id=nil)
+    def build_insert_row(entity, table, row, _id=nil)
       row[@column_name] = to_sequel(entity[@property_name]) if @table == table && entity.has_key?(@property_name)
     end
 
     alias :build_update_row :build_insert_row
 
-    def make_filter(value, columns_mapped_to=nil)
+    def make_filter(value, _columns_mapped_to=nil)
       {@column_qualified => to_sequel(value)}
     end
 
-    def make_multi_filter(values, columns_mapped_to=nil)
+    def make_multi_filter(values, _columns_mapped_to=nil)
       {@column_qualified => values.map {|v| to_sequel(v)}}
     end
   end

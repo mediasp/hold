@@ -18,15 +18,15 @@ module Hold::Sequel
     end
 
     # we don't update the ID - considered immutable
-    def build_update_row(entity, table, row)
+    def build_update_row(_entity, _table, _row)
     end
 
     # After a successful insert, we assign the last_insert_id back onto the entity's id property:
-    def post_insert(entity, rows, last_insert_id=nil)
+    def post_insert(entity, _rows, last_insert_id=nil)
       entity[@property_name] = last_insert_id if last_insert_id
     end
 
-    def load_value(row, id=nil, version=nil)
+    def load_value(row, _id=nil, _version=nil)
       row[:id]
     end
 

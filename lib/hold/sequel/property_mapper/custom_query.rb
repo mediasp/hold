@@ -25,7 +25,7 @@ module Hold::Sequel
       @query_block = options[:query] || block
     end
 
-    def load_value(row=nil, id=nil, version=nil)
+    def load_value(_row=nil, id=nil, version=nil)
       target_repo.query(version) do |dataset, mapping|
         @query_block.call(id, dataset, mapping)
       end.to_a

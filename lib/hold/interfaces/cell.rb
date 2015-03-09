@@ -2,14 +2,6 @@ module Hold
   # The most fundamental persistence interface. Just offers a storage slot
   # which stores a single instance, supporting get/set
   module Cell
-    def value
-      raise UnsupportedOperation
-    end
-
-    def value=(value)
-      raise UnsupportedOperation
-    end
-
     # Cells may optionally be 'emptyable?', that is, admit a special state of
     # 'empty' which is different to the state of storing an instance.
     #

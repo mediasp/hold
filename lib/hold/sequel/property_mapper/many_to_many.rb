@@ -63,7 +63,7 @@ module Hold::Sequel
       instance_eval(&block) if block
     end
 
-    def load_value(row, id, properties=nil)
+    def load_value(_row, id, properties=nil)
       target_repo.query(properties) do |dataset, property_columns|
         id_column = property_columns[target_repo.identity_property].first
         dataset = dataset.
@@ -76,7 +76,7 @@ module Hold::Sequel
     end
 
     # efficient batch load for the non-lazy case
-    def load_values(rows, ids=nil, properties=nil, &b)
+    def load_values(_rows, ids=nil, properties=nil, &b)
       query = target_repo.query(properties) do |dataset, mapping|
         id_column = mapping[target_repo.identity_property]
         dataset = dataset
@@ -130,7 +130,7 @@ module Hold::Sequel
     end
 
     # this is a hook for you to override
-    def add_denormalized_columns_to_join_table_row(entity, value, row)
+    def add_denormalized_columns_to_join_table_row(_entity, _value, _row)
     end
 
     def delete_join_table_rows(id)
@@ -139,12 +139,12 @@ module Hold::Sequel
       @join_table_dataset.filter(filters).delete
     end
 
-    def post_insert(entity, rows, insert_id)
+    def post_insert(entity, _rows, insert_id)
       return unless @writeable
       values = entity[@property_name] and insert_join_table_rows(entity, insert_id, values)
     end
 
-    def post_update(entity, update_entity, rows, result_from_pre_update=nil)
+    def post_update(entity, update_entity, _rows, _result_from_pre_update=nil)
       return unless @writeable
       update_values = update_entity[@property_name] or return
       delete_join_table_rows(entity.id)
