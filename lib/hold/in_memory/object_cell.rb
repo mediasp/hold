@@ -1,6 +1,6 @@
 module Hold
   module InMemory
-    class InMemory::ObjectCell < InMemory::Cell
+    class ObjectCell < InMemory::Cell
       include Hold::ObjectCell
 
       def get
