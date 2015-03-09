@@ -86,7 +86,7 @@ module Hold::Sequel
     end
 
     def single_result
-      row = Hold::Sequel.translate_exceptions { @dataset.first } or return
+      row = Hold::Sequel.translate_exceptions { @dataset.first } || (return)
 
       id = @repository.identity_mapper.load_value(row)
       property_hash = { @repository.identity_property => id }

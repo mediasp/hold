@@ -12,7 +12,7 @@ module Hold
       end
 
       def get_with_key(key)
-        value = @hash[key] and value.dup
+        (value = @hash[key]) && value.dup
       end
 
       def clear_key(key)

@@ -201,8 +201,8 @@ end
     # convenience to get a particular property mapper of this repo:
     def mapper(name)
       fail ArgumentError unless name.is_a?(Symbol)
-      @property_mappers[name] or
-        fail "#{self.class}: no such property mapper #{name.inspect}"
+      @property_mappers[name] ||
+        (fail "#{self.class}: no such property mapper #{name.inspect}")
     end
 
     # if you want to avoid the need to manually pass in target_repo parameters
@@ -440,7 +440,7 @@ end
     end
 
     def contains?(entity)
-      id = entity.id and contains_id?(id)
+      (id = entity.id) && contains_id?(id)
     end
 
     # CUD
@@ -527,7 +527,7 @@ end
     end
 
     def update(entity, update_entity = entity)
-      id = entity.id or fail Hold::MissingIdentity
+      id = entity.id || (fail Hold::MissingIdentity)
       transaction do
         pre_update(entity, update_entity)
 
@@ -586,7 +586,7 @@ end
     # to that used for inserts by store_new, which in turn is determined by the
     # order of your use_table declarations
     def delete(entity)
-      id = entity.id or fail Hold::MissingIdentity
+      id = entity.id || (fail Hold::MissingIdentity)
       transaction do
         pre_delete(entity)
         @property_mappers.each do |_name, mapper|

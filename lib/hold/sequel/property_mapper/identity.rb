@@ -12,7 +12,7 @@ module Hold::Sequel
 
     # the ID needs to go into insert rows for /all/ tables of the repo
     def build_insert_row(entity, table, row, id = nil)
-      id ||= entity[@property_name] or return
+      id ||= entity[@property_name] || (return)
       id_column = @repository.table_id_column(table)
       row[id_column] = id
     end

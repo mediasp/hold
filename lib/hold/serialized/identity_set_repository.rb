@@ -20,18 +20,18 @@ module Hold
       end
 
       def store(object)
-        id = object.id or fail MissingIdentity
+        id = object.id || (fail MissingIdentity)
         @cache.set_with_key(cache_key(id), @serializer.serialize(object))
         object
       end
 
       def delete(object)
-        id = object.id or fail MissingIdentity
+        id = object.id || (fail MissingIdentity)
         delete_id(id)
       end
 
       def contains?(object)
-        id = object.id or fail MissingIdentity
+        id = object.id || (fail MissingIdentity)
         contains_id?(id)
       end
 

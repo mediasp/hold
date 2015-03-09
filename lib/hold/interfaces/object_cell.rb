@@ -10,7 +10,7 @@ module Hold
     # property in question.  you might want to override with something more
     # efficient
     def get_property(property_name)
-      value = get and value[property_name]
+      (value = get) && value[property_name]
     end
 
     # default implementation gets the entire object and replaces it with a

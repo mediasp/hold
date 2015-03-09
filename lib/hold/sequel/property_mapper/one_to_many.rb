@@ -162,7 +162,7 @@ module Hold::Sequel
     def post_insert(entity, _rows, _insert_id)
       return unless @writeable
 
-      values = entity[@property_name] or return
+      values = entity[@property_name] || (return)
 
       # save the assocatied objects!
       values.each_with_index do |value, index|
@@ -222,13 +222,13 @@ module Hold::Sequel
         return
       end
 
-      values = entity[@property_name] and
+      (values = entity[@property_name]) &&
         row[@denormalized_count_column] = values.length
     end
 
     def post_update(entity, update_entity, _rows, values_before)
       return unless @writeable
-      update_values = update_entity[@property_name] or return
+      update_values = update_entity[@property_name] || (return)
       # delete any values which are no longer around:
       (values_before - update_values).each { |value| target_repo.delete(value) }
       # insert any new ones / update any existing ones which remain:

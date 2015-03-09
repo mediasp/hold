@@ -7,11 +7,11 @@ module Hold
     include Cell
 
     def get_slice(start, length)
-      value = get and value[start, length]
+      (value = get) && value[start, length]
     end
 
     def get_length
-      value = get and value.length
+      (value = get) && value.length
     end
 
     # returns an instance of ThinModels::LazyArray which lazily computes slices

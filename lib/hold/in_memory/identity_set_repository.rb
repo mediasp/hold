@@ -20,12 +20,12 @@ module Hold
       end
 
       def delete(object)
-        id = object.id or fail MissingIdentity
+        id = object.id || (fail MissingIdentity)
         delete_id(id)
       end
 
       def contains?(object)
-        id = object.id or fail MissingIdentity
+        id = object.id || (fail MissingIdentity)
         @by_id.include?(id)
       end
 
@@ -34,7 +34,7 @@ module Hold
       end
 
       def get_by_id(id)
-        value = @by_id[id] and value.dup
+        (value = @by_id[id]) && value.dup
       end
 
       def delete_id(id)

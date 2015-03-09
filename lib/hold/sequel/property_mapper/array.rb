@@ -40,7 +40,7 @@ module Hold::Sequel
     end
 
     def post_insert(entity, _rows, last_insert_id = nil)
-      array = entity[@property_name] or return
+      array = entity[@property_name] || (return)
       insert_rows = []
       array.each_with_index do |v, i|
         row = { @foreign_key => entity.id || last_insert_id, @value_column => v }
@@ -51,7 +51,7 @@ module Hold::Sequel
     end
 
     def post_update(entity, update_entity, _rows, _data_from_pre_update)
-      array = update_entity[@property_name] or return
+      array = update_entity[@property_name] || (return)
       @dataset.filter(@foreign_key => entity.id).delete
       insert_rows = []
       array.each_with_index do |v, i|

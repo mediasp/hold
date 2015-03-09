@@ -174,7 +174,7 @@ module Hold::Sequel
 
     def post_update(entity, update_entity, _rows, _result_from_pre_update = nil)
       return unless @writeable
-      update_values = update_entity[@property_name] or return
+      update_values = update_entity[@property_name] || (return)
       delete_join_table_rows(entity.id)
       insert_join_table_rows(entity, entity.id, update_values)
     end

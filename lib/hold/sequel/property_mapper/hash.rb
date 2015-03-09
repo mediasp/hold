@@ -48,14 +48,14 @@ module Hold::Sequel
     end
 
     def post_insert(entity, _rows, last_insert_id = nil)
-      hash = entity[@property_name] or return
+      hash = entity[@property_name] || (return)
       @dataset.multi_insert(hash.map do |k, v|
         { @foreign_key => last_insert_id, @key_column => k, @value_column => v }
       end)
     end
 
     def post_update(entity, update_entity, _rows, _data_from_pre_update)
-      hash = update_entity[@property_name] or return
+      hash = update_entity[@property_name] || (return)
       @dataset.filter(@foreign_key => entity.id).delete
       @dataset.multi_insert(hash.map do |k, v|
         { @foreign_key => entity.id, @key_column => k, @value_column => v }
