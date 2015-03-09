@@ -18,12 +18,12 @@ module Hold::Sequel
 
     def slice_from_start_and_length(offset, limit)
       rows = if limit > 0
-        Hold::Sequel.translate_exceptions do
-          @dataset.limit(limit, offset).all
-        end
-      else
-        []
-      end
+               Hold::Sequel.translate_exceptions do
+                 @dataset.limit(limit, offset).all
+               end
+             else
+               []
+             end
       # we're supposed to return nil if offset > length of the array,
       # as per Array#slice:
       return nil if rows.empty? && offset > 0 && offset > length

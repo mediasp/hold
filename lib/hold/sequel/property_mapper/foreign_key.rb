@@ -85,9 +85,11 @@ module Hold::Sequel
     def load_values(rows, ids=nil, properties=nil, &b)
       fkeys = rows.map {|row| row[@column_alias]}
       non_nil_fkeys = fkeys.compact
-      non_nil_fkey_results = if non_nil_fkeys.empty? then [] else
-        target_repo.get_many_by_ids(non_nil_fkeys, :properties => properties)
-      end
+      non_nil_fkey_results = if non_nil_fkeys.empty?
+                               []
+                             else
+                               target_repo.get_many_by_ids(non_nil_fkeys, :properties => properties)
+                             end
       fkeys.each_with_index do |fkey, index|
         yield(fkey ? non_nil_fkey_results.shift : nil, index)
       end

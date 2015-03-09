@@ -116,10 +116,10 @@ module Hold::Sequel
       rows = []
       values.each_with_index do |value, index|
         value_id = value.id || if @auto_store_new
-          target_repo.store_new(value); value.id
-        else
-          raise "value for ManyToMany mapped property #{@property_name} has no id, and :auto_store_new not specified"
-        end
+                                 target_repo.store_new(value); value.id
+                               else
+                                 raise "value for ManyToMany mapped property #{@property_name} has no id, and :auto_store_new not specified"
+                               end
         row = {@left_key => id, @right_key => value_id}
         row[@order_column] = index if @order_column
         row.merge!(@filter) if @filter
