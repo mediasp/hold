@@ -512,14 +512,14 @@ module Hold::Sequel
       id = entity.id or raise Hold::MissingIdentity
       transaction do
         pre_delete(entity)
-        @property_mappers.each do |name, mapper|
+        @property_mappers.each do |_name, mapper|
           mapper.pre_delete(entity)
         end
         @tables.reverse_each do |table|
           id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[table]])
           @db[table].filter(id_filter).delete
         end
-        @property_mappers.each do |name, mapper|
+        @property_mappers.each do |_name, mapper|
           mapper.post_delete(entity)
         end
         post_delete(entity)

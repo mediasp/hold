@@ -40,7 +40,7 @@ module Hold::Sequel
       return [] if rows.empty?
 
       property_hashes = []; ids = []
-      @repository.identity_mapper.load_values(rows) do |id,i|
+      @repository.identity_mapper.load_values(rows) do |id, _|
         property_hashes << {@repository.identity_property => id}
         ids << id
       end
