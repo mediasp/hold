@@ -24,6 +24,7 @@ DESC
   s.add_development_dependency('mocha', '~> 0.13.0')
   s.add_development_dependency('json')
   s.add_development_dependency('sqlite3')
+  s.add_development_dependency('pry')
 
   s.add_development_dependency('pronto')
   s.add_development_dependency('pronto-rubocop')
@@ -32,7 +33,7 @@ DESC
 
   s.add_dependency('sequel', '~> 3')
   s.add_dependency('wirer', '>= 0.4.0')
-  s.add_dependency('thin_models', '~> 0.1')
+  s.add_dependency('thin_models', '~> 0.2.1')
 
   s.files = Dir.glob("{lib}/**/*") + ['README.md']
 end

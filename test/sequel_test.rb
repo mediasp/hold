@@ -28,7 +28,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
   it "allocates an id when storing something which doesn't have one, where there's an id property mapped to an auto_increment/serial primary key" do
     entity = make_entity(abc: 'foo', def: 'bar')
     @repository.store_new(entity)
-    assert entity.has_key?(:id)
+    assert entity.key?(:id)
     assert_kind_of Integer, entity.id
     assert @repository.contains_id?(entity.id)
   end
@@ -162,9 +162,9 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       )
       repo.store(entity)
       entity = repo.get_by_id(entity.id)
-      assert entity.has_key?(:integer)
-      assert entity.has_key?(:datetime)
-      assert entity.has_key?(:float)
+      assert entity.key?(:integer)
+      assert entity.key?(:datetime)
+      assert entity.key?(:float)
       assert_equal 123, entity.integer
       assert_instance_of Time, entity.datetime
       assert_equal Time.utc(2000, 1, 2, 12, 30), entity.datetime
@@ -317,13 +317,13 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       foo = @foo_model_class.new(bar: bar)
       @foo_repo.store(foo)
       foo1 = @foo_repo.get_by_id(foo.id, properties: [:id])
-      assert !foo1.has_key?(:bar)
+      assert !foo1.key?(:bar)
       foo2 = @foo_repo.get_by_id(foo.id, properties: { bar: [:id] })
-      assert foo2.has_key?(:bar)
+      assert foo2.key?(:bar)
       assert_equal bar.id, foo2.bar.id
-      assert !foo2.bar.has_key?(:string)
+      assert !foo2.bar.key?(:string)
       foo3 = @foo_repo.get_by_id(foo.id, properties: { bar: [:id, :string] })
-      assert foo3.has_key?(:bar)
+      assert foo3.key?(:bar)
       assert_equal bar.id, foo3.bar.id
       assert_equal 'bar', foo3.bar.string
     end
@@ -337,9 +337,9 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       @bar_repo.expects(:query).never
 
       foo = @foo_repo.get_by_id(foo.id)
-      assert foo.has_key?(:bar)
-      assert foo.bar.has_key?(:id)
-      assert !foo.bar.has_key?(:string)
+      assert foo.key?(:bar)
+      assert foo.bar.key?(:id)
+      assert !foo.bar.key?(:string)
     end
   end
 
@@ -564,7 +564,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       poly1, poly2 = @baseclass_repo.get_many_by_ids([entity.id, entity2.id])
       assert_instance_of @subclass, poly1
       assert_instance_of @baseclass, poly2
-      assert !poly2.has_key?(:def)
+      assert !poly2.key?(:def)
     end
 
     it 'subclass repo should not load instance which is not of that subclass' do

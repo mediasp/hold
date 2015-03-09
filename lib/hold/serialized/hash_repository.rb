@@ -39,10 +39,10 @@ module Hold
         jsons.map { |json| json && @serializer.deserialize(json) }
       end
 
-      def has_key?(key)
+      def key?(key)
         @cache.key?(cache_key(key))
       end
-      alias_method :key?, :has_key?
+      alias_method :has_key?, :key?
 
       def clear_key(key)
         @cache.clear_key(cache_key(key))
