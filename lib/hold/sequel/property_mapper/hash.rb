@@ -22,7 +22,7 @@ module Hold::Sequel
         Sequel.as(@foreign_key,:id))
     end
 
-    def load_value(row=nil, id=nil, properties=nil)
+    def load_value(_row=nil, id=nil, properties=nil)
       result = {}
       @select_kv.filter(@foreign_key => id).each do |row|
         result[row[:key]] = row[:value]

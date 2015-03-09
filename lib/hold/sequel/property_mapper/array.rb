@@ -20,7 +20,7 @@ module Hold::Sequel
       @select_all = @select_all.order(@order_column) if @order_column
     end
 
-    def load_value(row=nil, id=nil, properties=nil)
+    def load_value(_row=nil, id=nil, _properties=nil)
       @select_v.filter(@foreign_key => id).map {|row| row[:value]}
     end
 
