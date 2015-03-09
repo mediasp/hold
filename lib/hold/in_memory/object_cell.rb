@@ -12,18 +12,18 @@ module Hold
       end
 
       def set_property(property_name, value)
-        raise EmptyConflict unless @value
+        fail EmptyConflict unless @value
         @value[property_name] = value
       end
 
       def clear_property(property_name)
-        raise EmptyConflict unless @value
+        fail EmptyConflict unless @value
         @value.delete(property_name)
       end
 
       def has_property?(property_name)
-        raise EmptyConflict unless @value
-        @value.has_key?(property_name)
+        fail EmptyConflict unless @value
+        @value.key?(property_name)
       end
     end
   end

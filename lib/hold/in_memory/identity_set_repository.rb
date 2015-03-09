@@ -3,7 +3,7 @@ module Hold
     class IdentitySetRepository
       include Hold::IdentitySetRepository
 
-      def initialize(allocates_ids=false)
+      def initialize(allocates_ids = false)
         @by_id = {}
         @id_seq = 0 if allocates_ids
       end
@@ -15,17 +15,17 @@ module Hold
       def store(object)
         id = object.id
         object.send(:id=, id = @id_seq += 1) if @id_seq && !id
-        raise MissingIdentity unless id
+        fail MissingIdentity unless id
         @by_id[id] = object
       end
 
       def delete(object)
-        id = object.id or raise MissingIdentity
+        id = object.id or fail MissingIdentity
         delete_id(id)
       end
 
       def contains?(object)
-        id = object.id or raise MissingIdentity
+        id = object.id or fail MissingIdentity
         @by_id.include?(id)
       end
 

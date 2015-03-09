@@ -1,7 +1,6 @@
 module Hold
   module InMemory
     class SetRepository
-
       include Hold::SetRepository
 
       def initialize

@@ -4,7 +4,7 @@ module Hold
     # Gets multiple entities at a time by a list of keys.
     # May override with an efficient multi-get implementation.
     def get_many_with_keys(keys)
-      keys.map {|key| get_with_key(key)}
+      keys.map { |key| get_with_key(key) }
     end
 
     def key_cell(key)
@@ -13,8 +13,13 @@ module Hold
 
     # Can override to indicate if you only support getting/setting values of a
     # particular class or classes:
-    def can_get_class?(_); true; end
-    def can_set_class?(_); true; end
+    def can_get_class?(_)
+      true
+    end
+
+    def can_set_class?(_)
+      true
+    end
 
     class KeyCell
       include Cell
@@ -36,11 +41,16 @@ module Hold
       end
 
       def empty?
-        @hash_repository.has_key?(@key)
+        @hash_repository.key?(@key)
       end
 
-      def can_get_class?(klass); @hash_repository.can_get_class?(klass); end
-      def can_set_class?(klass); @hash_repository.can_set_class?(klass); end
+      def can_get_class?(klass)
+        @hash_repository.can_get_class?(klass)
+      end
+
+      def can_set_class?(klass)
+        @hash_repository.can_set_class?(klass)
+      end
     end
   end
 end

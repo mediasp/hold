@@ -3,7 +3,7 @@ module Hold
     class ArrayCell
       include Hold::ArrayCell
 
-      def initialize(array=[])
+      def initialize(array = [])
         @array = array
       end
 
@@ -15,7 +15,7 @@ module Hold
         @array.replace(value)
       end
 
-      def get_slice(start,length)
+      def get_slice(start, length)
         @array[start, length]
       end
 

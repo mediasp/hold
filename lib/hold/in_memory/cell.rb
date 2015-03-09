@@ -6,7 +6,7 @@ module Hold
       # new -- empty
       # new(nil) -- non-empty, value is nil
       # new(123) -- non-empty, value is 123
-      def initialize(value=ARG_EMPTY)
+      def initialize(value = ARG_EMPTY)
         @value = value unless ARG_EMPTY.equal?(value)
       end
 

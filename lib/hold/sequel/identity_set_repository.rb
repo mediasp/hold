@@ -1,10 +1,14 @@
 require 'wirer'
 
 module Hold::Sequel
-  def self.IdentitySetRepository(model_class, main_table=nil, &block)
+  def self.IdentitySetRepository(model_class, main_table = nil, &block)
     Class.new(IdentitySetRepository) do
       set_model_class model_class
-      use_table(main_table, :id_column => :id, :id_sequence => true) if main_table
+
+      if main_table
+        use_table(main_table, id_column: :id, id_sequence: true)
+      end
+
       class_eval(&block) if block
     end
   end
@@ -14,101 +18,116 @@ module Hold::Sequel
 
     class << self
       def model_class
-        @model_class ||= (superclass.model_class if superclass < IdentitySetRepository)
+        @model_class ||=
+          (superclass.model_class if superclass < IdentitySetRepository)
       end
 
       def tables
-        @tables ||= (superclass < IdentitySetRepository ? superclass.tables.dup : [])
+        @tables ||=
+          (superclass < IdentitySetRepository ? superclass.tables.dup : [])
       end
 
       def property_mapper_args
-        @property_mapper_args ||= (superclass < IdentitySetRepository ? superclass.property_mapper_args.dup : [])
+        @property_mapper_args ||= if superclass < IdentitySetRepository
+                                    superclass.property_mapper_args.dup
+                                  else
+                                    []
+                                  end
       end
 
       include Wirer::Factory::Interface
 
       def constructor_dependencies
-        {:database => Wirer::Dependency.new_from_args(Sequel::Database)}
+        { database: Wirer::Dependency.new_from_args(Sequel::Database) }
       end
 
       def new_from_dependencies(deps, *p)
         new(deps[:database], *p)
       end
 
-      def provides_class; self; end
+      def provides_class
+        self
+      end
 
       def provides_features
         [[:get_class, model_class]]
       end
 
       def setter_dependencies
-        dependencies = {:observers => Wirer::Dependency.new(
-          :module   => Hold::Sequel::RepositoryObserver,
-          :features => [[:observes_repo_for_class, model_class]],
-          :multiple => true,
-          :optional => true
-        )}
-        property_mapper_args.each do |property_name, mapper_class, options, block|
-          mapper_class.setter_dependencies_for(options, &block).each do |dep_name, dep_args|
-            mapper_dep_name = :"#{property_name}__#{dep_name}"
-            dependencies[mapper_dep_name] = Wirer::Dependency.new_from_arg_or_args_list(dep_args)
+        dependencies = { observers: Wirer::Dependency.new(
+          module: Hold::Sequel::RepositoryObserver,
+          features: [[:observes_repo_for_class, model_class]],
+          multiple: true,
+          optional: true
+        ) }
+        property_mapper_args
+          .each do |property_name, mapper_class, options, block|
+            mapper_class.setter_dependencies_for(options, &block)
+              .each do |dep_name, dep_args|
+                mapper_dep_name = :"#{property_name}__#{dep_name}"
+                dependencies[mapper_dep_name] =
+                  Wirer::Dependency.new_from_arg_or_args_list(dep_args)
+              end
           end
-        end
         dependencies
       end
 
       def inject_dependency(instance, dep_name, value)
         if dep_name == :observers
-          value.each {|observer| instance.add_observer(observer)}
+          value.each { |observer| instance.add_observer(observer) }
         else
           mapper_name, dep_name = dep_name.to_s.split('__', 2)
           instance.mapper(mapper_name.to_sym).send("#{dep_name}=", value)
         end
       end
 
-    private
+      private
+
       def set_model_class(model_class)
         @model_class = model_class
       end
 
-      def use_table(name, options={})
+      def use_table(name, options = {})
         options[:id_column] ||= :id
         tables << [name.to_sym, options.freeze]
       end
 
-      def map_property(property_name, mapper_class, options={}, &block)
-        raise unless mapper_class <= PropertyMapper
+      def map_property(property_name, mapper_class, options = {}, &block)
+        fail unless mapper_class <= PropertyMapper
         property_mapper_args << [property_name, mapper_class, options, block]
       end
 
       # Some convenience mapper DSL methods for each of the mapper subclasses:
-      { :column        => 'Column',      :foreign_key      => 'ForeignKey',
-        :one_to_many   => 'OneToMany',   :many_to_many     => 'ManyToMany',
-        :created_at    => 'CreatedAt',   :updated_at       => 'UpdatedAt',
-        :hash_property => 'Hash',        :array_property   => 'Array',
-        :transformed_column => 'TransformedColumn',
-        :custom_query  => 'CustomQuery', :custom_query_single_value => 'CustomQuerySingleValue'
+      { column: 'Column',      foreign_key: 'ForeignKey',
+        one_to_many: 'OneToMany',   many_to_many: 'ManyToMany',
+        created_at: 'CreatedAt',   updated_at: 'UpdatedAt',
+        hash_property: 'Hash',        array_property: 'Array',
+        transformed_column: 'TransformedColumn',
+        custom_query: 'CustomQuery',
+        custom_query_single_value: 'CustomQuerySingleValue'
       }.each do |name, mapper_class|
-        class_eval <<-EOS, __FILE__, __LINE__+1
-          def map_#{name}(property_name, options={}, &block)
-            map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
-          end
+        class_eval <<-EOS, __FILE__, __LINE__ + 1
+def map_#{name}(property_name, options={}, &block)
+  map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
+end
         EOS
       end
     end
 
-    def model_class; self.class.model_class; end
+    def model_class
+      self.class.model_class
+    end
 
     attr_reader :db, :main_table, :property_mappers, :identity_property,
                 :identity_mapper, :id_sequence_table, :default_properties
 
     def initialize(db)
-      raise "abstract superclass" if instance_of?(IdentitySetRepository)
+      fail 'abstract superclass' if instance_of?(IdentitySetRepository)
       @db = db
 
       @tables = []
       @tables_id_columns = {}
-      self.class.tables.each do |name,options|
+      self.class.tables.each do |name, options|
         @tables << name
         @tables_id_columns[name] = options[:id_column]
         @id_sequence_table = name if options[:id_sequence]
@@ -121,13 +140,22 @@ module Hold::Sequel
 
       # map the identity_property
       @identity_property = :id # todo make this configurable
-      @identity_mapper = @property_mappers[@identity_property] = PropertyMapper::Identity.new(self, @identity_property)
+      @identity_mapper = @property_mappers[@identity_property] =
+        PropertyMapper::Identity.new(self, @identity_property)
 
-      self.class.property_mapper_args.each do |property_name, mapper_class, options, block|
-        @property_mappers[property_name] = mapper_class.new(self, property_name, options, &block)
-        @default_properties[property_name] = true if mapper_class <= PropertyMapper::Column
-        # for foreign key properties, by default we only load the ID (which is already present on the parent result row):
-        @default_properties[property_name] = JUST_ID if mapper_class <= PropertyMapper::ForeignKey
+      self.class.property_mapper_args
+        .each do |property_name, mapper_class, options, block|
+        @property_mappers[property_name] =
+          mapper_class.new(self, property_name, options, &block)
+
+        case
+        when mapper_class <= PropertyMapper::Column
+          @default_properties[property_name] = true
+        when mapper_class <= PropertyMapper::ForeignKey
+          # for foreign key properties, by default we only load the ID (which is
+          # already present on the parent result row):
+          @default_properties[property_name] = JUST_ID
+        end
       end
 
       @property_mappers.freeze
@@ -155,11 +183,16 @@ module Hold::Sequel
       model_class == self.model_class
     end
 
-    # see Hold::Sequel::RepositoryObserver for the interface you need to expose to be an observer here.
+    # see Hold::Sequel::RepositoryObserver for the interface you need to expose
+    # to be an observer here.
     #
-    # If you're using Wirer to construct the repository, a better way to hook the repo up with observers is to
-    # add RepositoryObservers to the Wirer::Container and have them provide feature [:observes_repo_for_class, model_class].
-    # They'll then get picked up by our multiple setter_dependency and added as an observer just after construction.
+    # If you're using Wirer to construct the repository, a better way to hook
+    # the repo up with observers is to add RepositoryObservers to the
+    # Wirer::Container and have them provide feature
+    # [:observes_repo_for_class, model_class].
+    #
+    # They'll then get picked up by our multiple setter_dependency and added as
+    # an observer just after construction.
     def add_observer(observer)
       @observers ||= []
       @observers << observer
@@ -167,14 +200,18 @@ module Hold::Sequel
 
     # convenience to get a particular property mapper of this repo:
     def mapper(name)
-      raise ArgumentError unless name.is_a?(Symbol)
-      @property_mappers[name] or raise "#{self.class}: no such property mapper #{name.inspect}"
+      fail ArgumentError unless name.is_a?(Symbol)
+      @property_mappers[name] or
+        fail "#{self.class}: no such property mapper #{name.inspect}"
     end
 
-    # if you want to avoid the need to manually pass in target_repo parameters for each property
-    # mapped by a foreign key mapper etc - this will have the mappers go find the dependency themselves.
+    # if you want to avoid the need to manually pass in target_repo parameters
+    # for each property mapped by a foreign key mapper etc - this will have the
+    # mappers go find the dependency themselves.
     def get_repo_dependencies_from(repo_set)
-      @property_mappers.each_value {|mapper| mapper.get_repo_dependencies_from(repo_set)}
+      @property_mappers.each_value do |mapper|
+        mapper.get_repo_dependencies_from(repo_set)
+      end
     end
 
     def table_id_column(table)
@@ -183,34 +220,35 @@ module Hold::Sequel
 
     private
 
-    # mini DSL for use in mapper_config block passed to constructor, which is instance_evalled:
+    # mini DSL for use in mapper_config block passed to constructor, which is
+    # instance_evalled:
 
-    def map_property(property_name, mapper_class=PropertyMapper, *p, &b)
-      raise unless mapper_class <= PropertyMapper
-      @property_mappers[property_name] = mapper_class.new(self, property_name, *p, &b)
+    def map_property(property_name, mapper_class = PropertyMapper, *p, &b)
+      fail unless mapper_class <= PropertyMapper
+      @property_mappers[property_name] =
+        mapper_class.new(self, property_name, *p, &b)
     end
 
     # Some convenience mapper DSL methods for each of the mapper subclasses:
-    { :column        => 'Column',      :foreign_key      => 'ForeignKey',
-      :one_to_many   => 'OneToMany',   :many_to_many     => 'ManyToMany',
-      :created_at    => 'CreatedAt',   :updated_at       => 'UpdatedAt',
-      :hash_property => 'Hash',        :array_property   => 'Array',
-      :custom_query  => 'CustomQuery', :custom_query_single_value => 'CustomQuerySingleValue'
+    { column: 'Column',      foreign_key: 'ForeignKey',
+      one_to_many: 'OneToMany',   many_to_many: 'ManyToMany',
+      created_at: 'CreatedAt',   updated_at: 'UpdatedAt',
+      hash_property: 'Hash',        array_property: 'Array',
+      custom_query: 'CustomQuery',
+      custom_query_single_value: 'CustomQuerySingleValue'
     }.each do |name, mapper_class|
-      class_eval <<-EOS, __FILE__, __LINE__+1
-        def map_#{name}(property_name, options={}, &block)
-          map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
-        end
+      class_eval <<-EOS, __FILE__, __LINE__ + 1
+def map_#{name}(property_name, options={}, &block)
+  map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
+end
       EOS
     end
 
-    def use_table(name, options={})
+    def use_table(name, options = {})
       @tables << name
       @tables_id_columns[name] = options[:id_column] || :id
       @id_sequence_table = name if options[:id_sequence]
     end
-
-
 
     # Some helpers
 
@@ -218,7 +256,7 @@ module Hold::Sequel
       Hold::Sequel.translate_exceptions(&b)
     end
 
-    def insert_row_for_entity(entity, table, id=nil)
+    def insert_row_for_entity(entity, table, id = nil)
       row = {}
       @property_mappers.each_value do |mapper|
         mapper.build_insert_row(entity, table, row, id)
@@ -236,13 +274,21 @@ module Hold::Sequel
 
     public
 
-    def construct_entity(property_hash, _=nil)
-      # new_skipping_checks is supported by ThinModels::Struct(::Typed) and skips any type checks or
-      # attribute name checks on the supplied attributes.
-      @model_class_new_method ||= model_class.respond_to?(:new_skipping_checks) ? :new_skipping_checks : :new
-      model_class.send(@model_class_new_method, property_hash) do |model, property|
-        get_property(model, property)
-      end
+    def construct_entity(property_hash, _ = nil)
+      # new_skipping_checks is supported by ThinModels::Struct(::Typed) and
+      # skips any type checks or attribute name checks on the supplied
+      # attributes.
+      @model_class_new_method ||=
+        if model_class.respond_to?(:new_skipping_checks)
+          :new_skipping_checks
+        else
+          :new
+        end
+
+      model_class
+        .send(@model_class_new_method, property_hash) do |model, property|
+          get_property(model, property)
+        end
     end
 
     def construct_entity_from_id(id)
@@ -251,9 +297,9 @@ module Hold::Sequel
       end
     end
 
-    # this determines if an optimisation can be done whereby if only the ID property is
-    # requested to be loaded, the object(s) can be constructed directly from their ids
-    # without needing to be fetched from the database.
+    # this determines if an optimisation can be done whereby if only the ID
+    # property is requested to be loaded, the object(s) can be constructed
+    # directly from their ids without needing to be fetched from the database.
     def can_construct_from_id_alone?(properties)
       properties == JUST_ID
     end
@@ -262,7 +308,8 @@ module Hold::Sequel
       main_table, *other_tables = tables
       main_id = @identity_mapper.qualified_column_name(main_table)
       other_tables.inject(@db[main_table]) do |dataset, table|
-        dataset.join(table, @identity_mapper.qualified_column_name(table) => main_id)
+        dataset.join(table,
+                     @identity_mapper.qualified_column_name(table) => main_id)
       end
     end
 
@@ -277,16 +324,19 @@ module Hold::Sequel
       end
       tables.unshift(@main_table) if tables.delete(@main_table)
 
-      # the identity mapper gets called last, so that it can get a hint about what
-      # tables are already required for the other columns. (seeing as how an identity column
-      # needs to be present on every table used for a given repo, it should never need to
-      # add an extra table just in order to select the ID)
-      id_cols, id_aliases, id_tables = @identity_mapper.columns_aliases_and_tables_for_select(tables.first || @main_table)
+      # the identity mapper gets called last, so that it can get a hint about
+      # what tables are already required for the other columns. (seeing as how
+      # an identity column needs to be present on every table used for a given
+      # repo, it should never need to add an extra table just in order to select
+      # the ID)
+      id_cols, id_aliases, id_tables = @identity_mapper
+                                       .columns_aliases_and_tables_for_select(tables.first || @main_table)
+
       columns_by_property[@identity_property] = id_cols
       aliased_columns.concat(id_aliases)
       tables.concat(id_tables)
       aliased_columns.uniq!; tables.uniq!
-      return columns_by_property, aliased_columns, tables
+      [columns_by_property, aliased_columns, tables]
     end
 
     def transaction(*p, &b)
@@ -296,36 +346,38 @@ module Hold::Sequel
     # This is the main mechanism to retrieve stuff from the repo via custom
     # queries.
 
-    def query(properties=nil, &b)
+    def query(properties = nil, &b)
       properties = @default_properties if properties == true || properties.nil?
       Query.new(self, properties, &b)
     end
 
     # Can take a block which may add extra conditions, joins, order etc onto
     # the relevant query.
-    def get_many_with_dataset(options={}, &b)
+    def get_many_with_dataset(options = {}, &b)
       query(options[:properties], &b).to_a(options[:lazy])
     end
 
-    def get_all(options={})
+    def get_all(options = {})
       query(options[:properties]).to_a(options[:lazy])
     end
 
     # like get_many_with_dataset but just gets a single row, or nil if not
     # found. adds limit(1) to the dataset for you.
-    def get_with_dataset(options={}, &b)
+    def get_with_dataset(options = {}, &b)
       query(options[:properties], &b).single_result
     end
 
-    def get_property(entity, property, options={})
+    def get_property(entity, property, options = {})
       unless property.is_a? Symbol
         fail ArgumentError, 'get_property must suppy a symbol'
       end
       begin
-        result = query(property => options[:properties]) do |dataset, property_columns|
-          filter = @identity_mapper.make_filter(entity.id, property_columns[@identity_property])
-          dataset.filter(filter)
-        end.single_result
+        result =
+          query(property => options[:properties]) do |dataset, property_columns|
+            filter = @identity_mapper
+                     .make_filter(entity.id, property_columns[@identity_property])
+            dataset.filter(filter)
+          end.single_result
       rescue TypeError
         # catches test errors caught by []ing a string post 1.8
         raise ArgumentError, 'get_property caught a type error, check options'
@@ -333,31 +385,41 @@ module Hold::Sequel
       result && result[property]
     end
 
-    def get_by_id(id, options={})
+    def get_by_id(id, options = {})
       properties = options[:properties]
-      return construct_entity_from_id(id) if can_construct_from_id_alone?(properties)
+
+      if can_construct_from_id_alone?(properties)
+        return construct_entity_from_id(id)
+      end
 
       query(properties) do |dataset, property_columns|
-        filter = @identity_mapper.make_filter(id, property_columns[@identity_property])
+        filter = @identity_mapper
+                 .make_filter(id, property_columns[@identity_property])
         dataset.filter(filter)
       end.single_result
     end
 
     # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
-    def get_many_by_ids(ids, options={})
+    def get_many_by_ids(ids, options = {})
       properties = options[:properties]
-      return ids.map {|id| construct_entity_from_id(id)} if can_construct_from_id_alone?(properties)
 
-      results_by_id = {}
-      results = query(options[:properties]) do |ds,mapping|
-        id_filter = @identity_mapper.make_multi_filter(ids.uniq, mapping[@identity_property])
+      if can_construct_from_id_alone?(properties)
+        return ids.map { |id| construct_entity_from_id(id) }
+      end
+
+      results = query(options[:properties]) do |ds, mapping|
+        id_filter = @identity_mapper
+                    .make_multi_filter(ids.uniq, mapping[@identity_property])
         ds.filter(id_filter)
       end.to_a(options[:lazy])
-      results.each {|object| results_by_id[object.id] = object}
-      ids.map {|id| results_by_id[id]}
+
+      results_by_id = results.each_with_object({}) do |object, hash|
+        hash[object.id] = object
+      end
+      ids.map { |id| results_by_id[id] }
     end
 
-    def get_many_by_property(property, value, options={})
+    def get_many_by_property(property, value, options = {})
       properties_to_fetch ||= @default_properties.dup
       properties_to_fetch[property] = true
       query(options[:properties]) do |dataset, property_columns|
@@ -366,13 +428,14 @@ module Hold::Sequel
       end.to_a(options[:lazy])
     end
 
-    def get_by_property(property, value, options={})
+    def get_by_property(property, value, options = {})
       get_many_by_property(property, value, options).first
     end
 
     def contains_id?(id)
       dataset = dataset_to_select_tables(@main_table)
-      id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[@main_table]])
+      id_filter = @identity_mapper
+                  .make_filter(id, [@tables_id_columns[@main_table]])
       dataset.filter(id_filter).select(1).limit(1).single_value ? true : false
     end
 
@@ -380,15 +443,15 @@ module Hold::Sequel
       id = entity.id and contains_id?(id)
     end
 
-
     # CUD
 
     # Calls one of store_new (insert) or update as appropriate.
     #
-    # Where the repo allocates_ids, you can supply an entity without an ID and store_new will be called.
+    # Where the repo allocates_ids, you can supply an entity without an ID and
+    # store_new will be called.
     #
-    # If the entity has an ID, it will check whether it's currently contained in the repository
-    # before calling store_new or update as appropriate.
+    # If the entity has an ID, it will check whether it's currently contained in
+    # the repository before calling store_new or update as appropriate.
     def store(entity)
       id = entity.id
       if id
@@ -403,7 +466,7 @@ module Hold::Sequel
         if allocates_ids?
           store_new(entity)
         else
-          raise Hold::MissingIdentity
+          fail Hold::MissingIdentity
         end
       end
       entity
@@ -414,29 +477,29 @@ module Hold::Sequel
     # that this row is inserted first and the resulting insert_id
     # obtained is passed when building subsequent rows.
     #
-    # note: order of inserts is important here if you have foreign key dependencies between
-    # the ID columns of the different tables; if so you'll need to order your use_table
-    # declarations accordingly.
+    # note: order of inserts is important here if you have foreign key
+    # dependencies between the ID columns of the different tables; if so you'll
+    # need to order your use_table declarations accordingly.
     def store_new(entity)
       transaction do
         rows = {}; insert_id = nil
         pre_insert(entity)
-        @property_mappers.each_value {|mapper| mapper.pre_insert(entity)}
+        @property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
         if @id_sequence_table
           row = insert_row_for_entity(entity, @id_sequence_table)
-          insert_id = translate_exceptions {@db[@id_sequence_table].insert(row)}
+          insert_id = translate_exceptions { @db[@id_sequence_table].insert(row) }
           rows[@id_sequence_table] = row
         end
-        # note: order is important here if you have foreign key dependencies, order
-        # your use_table declarations appropriately:
+        # note: order is important here if you have foreign key dependencies,
+        # order your use_table declarations appropriately:
         @tables.each do |table|
           next if table == @id_sequence_table # done that already
           row = insert_row_for_entity(entity, table, insert_id)
-          translate_exceptions {@db[table].insert(row)}
+          translate_exceptions { @db[table].insert(row) }
           rows[table] = row
         end
-        # identity_mapper should be called first, so that other mappers have the new ID
-        # available on the entity when called.
+        # identity_mapper should be called first, so that other mappers have the
+        # new ID available on the entity when called.
         @identity_mapper.post_insert(entity, rows, insert_id)
         @property_mappers.each_value do |mapper|
           next if mapper == @identity_mapper
@@ -448,35 +511,43 @@ module Hold::Sequel
     end
 
     # Remember to call super if you override this.
-    # If you do any extra inserting in an overridden pre_insert, call super beforehand
+    # If you do any extra inserting in an overridden pre_insert, call super
+    # beforehand
     def pre_insert(entity)
-      @observers.each {|observer| observer.pre_insert(self, entity)} if @observers
+      Array(@observers).each { |observer| observer.pre_insert(self, entity) }
     end
 
     # Remember to call super if you override this.
-    # If you do any extra inserting in an overridden post_insert, call super afterwards
+    # If you do any extra inserting in an overridden post_insert, call super
+    # afterwards
     def post_insert(entity, rows, insert_id)
-      @observers.each {|observer| observer.post_insert(self, entity, rows, insert_id)} if @observers
+      Array(@observers).each do |observer|
+        observer.post_insert(self, entity, rows, insert_id)
+      end
     end
 
-    def update(entity, update_entity=entity)
-      id = entity.id or raise Hold::MissingIdentity
+    def update(entity, update_entity = entity)
+      id = entity.id or fail Hold::MissingIdentity
       transaction do
-        rows = {}; data_from_mappers = {}
         pre_update(entity, update_entity)
-        @property_mappers.each do |name, mapper|
-          data_from_mappers[name] = mapper.pre_update(entity, update_entity)
+
+        data_from_mappers = @property_mappers
+                            .each_with_object({}) do |(name, mapper), hash|
+          hash[name] = mapper.pre_update(entity, update_entity)
         end
-        @tables.each do |table|
-          row = update_row_for_entity(update_entity, table)
-          unless row.empty?
-            id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[table]])
-            translate_exceptions {@db[table].filter(id_filter).update(row)}
+
+        rows = @tables.each_with_object({}) do |table, hash|
+          hash[table] = update_row_for_entity(update_entity, table).tap do |row|
+            unless row.empty?
+              id_filter = @identity_mapper
+                          .make_filter(id, [@tables_id_columns[table]])
+              translate_exceptions { @db[table].filter(id_filter).update(row) }
+            end
           end
-          rows[table] = row
         end
         @property_mappers.each do |name, mapper|
-          mapper.post_update(entity, update_entity, rows, data_from_mappers[name])
+          mapper
+            .post_update(entity, update_entity, rows, data_from_mappers[name])
         end
         post_update(entity, update_entity, rows)
         entity.merge!(update_entity) if entity.respond_to?(:merge!)
@@ -485,15 +556,21 @@ module Hold::Sequel
     end
 
     # Remember to call super if you override this.
-    # If you do any extra updating in an overridden pre_update, call super beforehand
+    # If you do any extra updating in an overridden pre_update, call super
+    # beforehand
     def pre_update(entity, update_entity)
-      @observers.each {|observer| observer.pre_update(self, entity, update_entity)} if @observers
+      Array(@observers).each do |observer|
+        observer.pre_update(self, entity, update_entity)
+      end
     end
 
     # Remember to call super if you override this.
-    # If you do any extra updating in an overridden post_update, call super afterwards
+    # If you do any extra updating in an overridden post_update, call super
+    # afterwards
     def post_update(entity, update_entity, rows)
-      @observers.each {|observer| observer.post_update(self, entity, update_entity, rows)} if @observers
+      Array(@observers).each do |observer|
+        observer.post_update(self, entity, update_entity, rows)
+      end
     end
 
     def update_by_id(id, update_entity)
@@ -509,14 +586,15 @@ module Hold::Sequel
     # to that used for inserts by store_new, which in turn is determined by the
     # order of your use_table declarations
     def delete(entity)
-      id = entity.id or raise Hold::MissingIdentity
+      id = entity.id or fail Hold::MissingIdentity
       transaction do
         pre_delete(entity)
         @property_mappers.each do |_name, mapper|
           mapper.pre_delete(entity)
         end
         @tables.reverse_each do |table|
-          id_filter = @identity_mapper.make_filter(id, [@tables_id_columns[table]])
+          id_filter = @identity_mapper
+                      .make_filter(id, [@tables_id_columns[table]])
           @db[table].filter(id_filter).delete
         end
         @property_mappers.each do |_name, mapper|
@@ -527,15 +605,17 @@ module Hold::Sequel
     end
 
     # Remember to call super if you override this.
-    # If you do any extra deleting in an overridden pre_delete, call super beforehand
+    # If you do any extra deleting in an overridden pre_delete, call super
+    # beforehand
     def pre_delete(entity)
-      @observers.each {|observer| observer.pre_delete(self, entity)} if @observers
+      Array(@observers).each { |observer| observer.pre_delete(self, entity) }
     end
 
     # Remember to call super if you override this.
-    # If you do any extra deleting in an overridden post_delete, call super afterwards
+    # If you do any extra deleting in an overridden post_delete, call super
+    # afterwards
     def post_delete(entity)
-      @observers.each {|observer| observer.post_delete(self, entity)} if @observers
+      Array(@observers).each { |observer| observer.post_delete(self, entity) }
     end
 
     def delete_id(id)

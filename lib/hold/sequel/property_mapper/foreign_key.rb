@@ -1,39 +1,46 @@
 module Hold::Sequel
-  # Maps to an associated object which is fetched by id from a target repository using a foriegn key column
+  # Maps to an associated object which is fetched by id from a target repository
+  # using a foriegn key column
   class PropertyMapper::ForeignKey < PropertyMapper
-    def self.setter_dependencies_for(options={})
-      features = [*options[:model_class]].map {|klass| [:get_class, klass]}
-      {:target_repo => [Hold::IdentitySetRepository, *features]}
+    def self.setter_dependencies_for(model_class:)
+      features = [Array(model_class)].map { |klass| [:get_class, klass] }
+      { target_repo: [Hold::IdentitySetRepository, *features] }
     end
 
     attr_accessor :target_repo
 
-    attr_reader :columns_aliases_and_tables_for_select, :column_alias, :column_name, :table,
-      :column_qualified, :auto_store_new, :model_class
+    attr_reader :columns_aliases_and_tables_for_select, :column_alias,
+                :column_name, :table, :column_qualified, :auto_store_new,
+                :model_class
 
-    # auto_store_new: where the value for this property is an object without an ID,
-    #  automatically store_new the object in the target_repo before trying to store
-    #  the object in question with this foreign key property. In the absence of this
-    #  setting, values without an ID will cause an exception
-    def initialize(repo, property_name, options)
+    # auto_store_new: where the value for this property is an object without an
+    # ID, automatically store_new the object in the target_repo before trying to
+    # store the object in question with this foreign key property. In the
+    # absence of this setting, values without an ID will cause an exception
+    def initialize(repo, property_name,
+                   model_class:, table: nil, auto_store_new: false,
+                   column_name: :"#{property_name}_id")
       super(repo, property_name)
 
-      @table = options[:table] || @repository.main_table
-      @column_name = options[:column_name] || :"#{property_name}_id"
+      @table = table || @repository.main_table
+      @column_name = column_name
       @column_alias = :"#{@table}_#{@column_name}"
-      @column_qualified = Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
+      @column_qualified =
+        Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
       @columns_aliases_and_tables_for_select = [
         [@column_qualified],
         [Sequel::SQL::AliasedExpression.new(@column_qualified, @column_alias)],
         [@table]
       ]
 
-      @auto_store_new = options[:auto_store_new] || false
-      @model_class = options[:model_class] or raise ArgumentError
+      @auto_store_new = auto_store_new
+      @model_class = model_class
     end
 
-    def load_value(row, _id=nil, properties=nil)
-      fkey = row[@column_alias] and target_repo.get_by_id(fkey, :properties => properties)
+    def load_value(row, _id = nil, properties = nil)
+      if (fkey = row[@column_alias])
+        target_repo.get_by_id(fkey, properties: properties)
+      end
     end
 
     def ensure_value_has_id_where_present(value)
@@ -41,7 +48,8 @@ module Hold::Sequel
         if @auto_store_new
           target_repo.store_new(value)
         else
-          raise "value for ForeignKey mapped property #{@property_name} has no id, and :auto_store_new not specified"
+          fail "value for ForeignKey mapped property #{@property_name} has "\
+            ' no id, and :auto_store_new not specified'
         end
       end
     end
@@ -54,42 +62,44 @@ module Hold::Sequel
       ensure_value_has_id_where_present(update_entity[@property_name])
     end
 
-    def build_insert_row(entity, table, row, _id=nil)
-      if @table == table && entity.has_key?(@property_name)
+    def build_insert_row(entity, table, row, _id = nil)
+      if @table == table && entity.key?(@property_name)
         value = entity[@property_name]
         row[@column_name] = value && value.id
       end
     end
-    alias :build_update_row :build_insert_row
+    alias_method :build_update_row, :build_insert_row
 
-    # for now ignoring the columns_mapped_to, since Identity mapper is the only one
-    # for which this matters at present
+    # for now ignoring the columns_mapped_to, since Identity mapper is the only
+    # one for which this matters at present
 
-    def make_filter(value, _columns_mapped_to=nil)
-      {@column_qualified => value && value.id}
+    def make_filter(value, _columns_mapped_to = nil)
+      { @column_qualified => value && value.id }
     end
 
-    def make_multi_filter(values, _columns_mapped_to=nil)
-      {@column_qualified => values.map {|v| v.id}}
+    def make_multi_filter(values, _columns_mapped_to = nil)
+      { @column_qualified => values.map(&:id) }
     end
 
-    def make_filter_by_id(id, _columns_mapped_to=nil)
-      {@column_qualified => id}
+    def make_filter_by_id(id, _columns_mapped_to = nil)
+      { @column_qualified => id }
     end
 
-    def make_filter_by_ids(ids, _columns_mapped_to=nil)
-      {@column_qualified => ids}
+    def make_filter_by_ids(ids, _columns_mapped_to = nil)
+      { @column_qualified => ids }
     end
 
-    # efficient batch load which takes advantage of get_many_by_ids on the target repo
-    def load_values(rows, _ids=nil, properties=nil)
-      fkeys = rows.map {|row| row[@column_alias]}
+    # efficient batch load which takes advantage of get_many_by_ids on the
+    # target repo
+    def load_values(rows, _ids = nil, properties = nil)
+      fkeys = rows.map { |row| row[@column_alias] }
       non_nil_fkeys = fkeys.compact
-      non_nil_fkey_results = if non_nil_fkeys.empty?
-                               []
-                             else
-                               target_repo.get_many_by_ids(non_nil_fkeys, :properties => properties)
-                             end
+      non_nil_fkey_results =
+        if non_nil_fkeys.empty?
+          []
+        else
+          target_repo.get_many_by_ids(non_nil_fkeys, properties: properties)
+        end
       fkeys.each_with_index do |fkey, index|
         yield(fkey ? non_nil_fkey_results.shift : nil, index)
       end

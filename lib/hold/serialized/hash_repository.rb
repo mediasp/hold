@@ -14,7 +14,7 @@ module Hold
 
       attr_reader :cache, :serializer, :key_prefix
 
-      def initialize(cache, serializer, key_prefix=nil)
+      def initialize(cache, serializer, key_prefix = nil)
         @cache = cache
         @serializer = serializer
         @key_prefix = key_prefix
@@ -29,16 +29,18 @@ module Hold
       end
 
       def get_with_key(key)
-        json = @cache.get_with_key(cache_key(key)) and @serializer.deserialize(json)
+        if (json = @cache.get_with_key(cache_key(key)))
+          @serializer.deserialize(json)
+        end
       end
 
       def get_many_with_keys(keys)
-        jsons = @cache.get_many_with_keys(*keys.map {|key| cache_key(key)})
-        jsons.map {|json| json && @serializer.deserialize(json)}
+        jsons = @cache.get_many_with_keys(*keys.map { |key| cache_key(key) })
+        jsons.map { |json| json && @serializer.deserialize(json) }
       end
 
       def has_key?(key)
-        @cache.has_key?(cache_key(key))
+        @cache.key?(cache_key(key))
       end
       alias_method :key?, :has_key?
 

@@ -35,7 +35,7 @@ module Hold
     # Loads a fresh instance of the given object by its id
     # Returns nil where the object is no longer present in the repository
     def reload(object)
-      id = object.id or raise MissingIdentity
+      id = object.id or fail MissingIdentity
       get_by_id(id)
     end
 
@@ -43,7 +43,7 @@ module Hold
     # data.
     # Returns nil where the object is no longer present in the repository
     def load(object)
-      raise UnsupportedOperation unless object.respond_to?(:merge!)
+      fail UnsupportedOperation unless object.respond_to?(:merge!)
       updated = reload(object) or return
       object.merge!(updated)
       object
@@ -52,8 +52,8 @@ module Hold
     # Applies an in-place update to the object, where it exists in the
     # repository
     def update(entity, update_entity)
-      raise UnsupportedOperation unless entity.respond_to?(:merge!)
-      load(entity) or return
+      fail UnsupportedOperation unless entity.respond_to?(:merge!)
+      load(entity) || return
       entity.merge!(update_entity)
       store(entity)
     end
@@ -62,7 +62,7 @@ module Hold
     # it exists in the repository
     def update_by_id(id, update_entity)
       entity = get_by_id(id) or return
-      raise UnsupportedOperation unless entity.respond_to?(:merge!)
+      fail UnsupportedOperation unless entity.respond_to?(:merge!)
       entity.merge!(update_entity)
       store(entity)
     end
@@ -71,9 +71,8 @@ module Hold
       !!get_by_id(id)
     end
 
-
     def get_many_by_ids(ids)
-      ids.map {|id| get_by_id(id)}
+      ids.map { |id| get_by_id(id) }
     end
 
     def id_cell(id)
@@ -81,7 +80,7 @@ module Hold
     end
 
     def cell(object)
-      id = object.id or raise MissingIdentity
+      id = object.id or fail MissingIdentity
       id_cell(id)
     end
 

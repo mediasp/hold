@@ -1,12 +1,12 @@
 module Hold::Sequel
   class PropertyMapper::UpdatedAt < PropertyMapper::Column
-    def build_insert_row(_entity, table, row, _id=nil)
+    def build_insert_row(_entity, table, row, _id = nil)
       row[@column_name] = Time.now if table == @table
     end
 
-    alias :build_update_row :build_insert_row
+    alias_method :build_update_row, :build_insert_row
 
-    def post_insert(entity, rows, _last_insert_id=nil)
+    def post_insert(entity, rows, _last_insert_id = nil)
       entity[@property_name] = rows[@table][@column_name]
     end
 

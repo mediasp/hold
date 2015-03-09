@@ -5,7 +5,7 @@ module Hold
 
       attr_reader :cache, :serializer, :key_prefix
 
-      def initialize(cache, serializer, key_prefix=nil)
+      def initialize(cache, serializer, key_prefix = nil)
         @cache = cache
         @serializer = serializer
         @key_prefix = key_prefix
@@ -20,18 +20,18 @@ module Hold
       end
 
       def store(object)
-        id = object.id or raise MissingIdentity
+        id = object.id or fail MissingIdentity
         @cache.set_with_key(cache_key(id), @serializer.serialize(object))
         object
       end
 
       def delete(object)
-        id = object.id or raise MissingIdentity
+        id = object.id or fail MissingIdentity
         delete_id(id)
       end
 
       def contains?(object)
-        id = object.id or raise MissingIdentity
+        id = object.id or fail MissingIdentity
         contains_id?(id)
       end
 
@@ -39,7 +39,7 @@ module Hold
         json = @cache.get_with_key(cache_key(id))
         if json
           string_hash = @serializer.deserialize(json)
-          string_hash.inject({}) do |memo, (k,v)|
+          string_hash.inject({}) do |memo, (k, v)|
             memo[k.to_sym] = v
             memo
           end
@@ -51,7 +51,7 @@ module Hold
       end
 
       def contains_id?(id)
-        @cache.has_key?(cache_key(id))
+        @cache.key?(cache_key(id))
       end
     end
   end

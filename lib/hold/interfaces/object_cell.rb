@@ -10,20 +10,20 @@ module Hold
     # property in question.  you might want to override with something more
     # efficient
     def get_property(property_name)
-      value = get() and value[property_name]
+      value = get and value[property_name]
     end
 
     # default implementation gets the entire object and replaces it with a
     # version with the property in question changed.
     # you might want to override with something more efficient.
     def set_property(property_name, value)
-      object = get()
+      object = get
       object[property_name] = value
       set(object)
     end
 
     def clear_property(property_name)
-      value = get()
+      value = get
       value.delete(property_name)
       set(value)
     end
@@ -33,7 +33,7 @@ module Hold
     end
 
     def get_properties(*properties)
-      properties.map {|p| get_property(p)}
+      properties.map { |p| get_property(p) }
     end
 
     # May return a Cell which allows get / set / potentially other operations
