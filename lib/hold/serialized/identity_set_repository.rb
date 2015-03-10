@@ -39,9 +39,8 @@ module Hold
         json = @cache.get_with_key(cache_key(id))
         if json
           string_hash = @serializer.deserialize(json)
-          string_hash.inject({}) do |memo, (k, v)|
+          string_hash.each_with_object({}) do |(k, v), memo|
             memo[k.to_sym] = v
-            memo
           end
         end
       end
