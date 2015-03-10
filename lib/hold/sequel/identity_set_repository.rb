@@ -140,7 +140,7 @@ end
         @default_properties = {}
 
         # map the identity_property
-        @identity_property = :id # todo make this configurable
+        @identity_property = :id # TODO: make this configurable
         @identity_mapper = @property_mappers[@identity_property] =
           PropertyMapper::Identity.new(self, @identity_property)
 
