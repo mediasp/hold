@@ -1,7 +1,7 @@
 module Hold
   module Sequel
-    # A property which is an array of primitive values. Persisted 'all in one go'
-    # in a separate table.
+    # A property which is an array of primitive values. Persisted 'all in one
+    # go' in a separate table.
     class PropertyMapper
       class Array < PropertyMapper
         attr_reader :table, :foreign_key, :value_column
@@ -17,7 +17,8 @@ module Hold
           @order_column = options[:order_column]
 
           @dataset = @repository.db[@table]
-          @select_v = @repository.db[@table].select(Sequel.as(@value_column, :value))
+          @select_v = @repository.db[@table]
+                      .select(Sequel.as(@value_column, :value))
           @select_v = @select_v.order(@order_column) if @order_column
           @select_all = @repository.db[@table].select(
             Sequel.as(@value_column, :value),
@@ -45,7 +46,8 @@ module Hold
           array = entity[@property_name] || (return)
           insert_rows = []
           array.each_with_index do |v, i|
-            row = { @foreign_key => entity.id || last_insert_id, @value_column => v }
+            row = { @foreign_key => entity.id || last_insert_id,
+                    @value_column => v }
             row[@order_column] = i if @order_column
             insert_rows << row
           end

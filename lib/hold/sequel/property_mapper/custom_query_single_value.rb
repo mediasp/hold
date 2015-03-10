@@ -6,8 +6,8 @@ module Hold
     # It allows you to fetch the item via an arbitrary custom query against the
     # target repository.
     #
-    # You supply a block which takes the dataset and mapper arguments supplied by
-    # the repository's query_for_version method, but also an additional ID
+    # You supply a block which takes the dataset and mapper arguments supplied
+    # by the repository's query_for_version method, but also an additional ID
     # argument for the ID of the object for which the property is being fetched.
     #
     # example:
@@ -27,8 +27,8 @@ module Hold
         attr_accessor :target_repo
 
         def initialize(repo, property_name, model_class:, &block)
-          # re &nil: our &block is otherwise implicitly passed on to super it seems,
-          # bit odd
+          # re &nil: our &block is otherwise implicitly passed on to super it
+          # seems, bit odd
           super(repo, property_name, &nil)
           @model_class = model_class
           @query_block = block

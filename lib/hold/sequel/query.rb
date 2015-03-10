@@ -3,8 +3,8 @@ module Hold
     # A query has a dataset and mappings constructed to select a particular
     # set of properties on a particular Sequel::IdentitySetRepository
     class Query
-      attr_reader :dataset, :count_dataset, :property_versions, :property_columns,
-                  :aliased_columns, :tables
+      attr_reader :dataset, :count_dataset, :property_versions,
+                  :property_columns, :aliased_columns, :tables
 
       # Repo: repository to query
       # properties: mapping or array of properties to fetch.
@@ -16,7 +16,9 @@ module Hold
       #   hash of property names = fetch just these properties, each in the
       #   version given in the hash
       #
-      # can pass a block: {|dataset, property_columns| return dataset.messed_with}
+      # can pass a block: do |dataset, property_columns|
+      #                     return dataset.messed_with
+      #                   end
       def initialize(repo, properties)
         @repository = repo
 
@@ -80,9 +82,9 @@ module Hold
 
       alias_method :to_a, :results
 
-      # this one is useful if you add extra selected columns onto the dataset, and
-      # you want to get at those extra values on the underlying rows alongside the
-      # loaded entities.
+      # this one is useful if you add extra selected columns onto the dataset,
+      # and you want to get at those extra values on the underlying rows
+      # alongside the loaded entities.
       def results_with_rows
         load_from_rows(@dataset.all, true)
       end

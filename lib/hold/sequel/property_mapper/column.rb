@@ -21,7 +21,8 @@ module Hold
 
           @columns_aliases_and_tables_for_select = [
             [@column_qualified],
-            [::Sequel::SQL::AliasedExpression.new(@column_qualified, @column_alias)],
+            [::Sequel::SQL::AliasedExpression
+             .new(@column_qualified, @column_alias)],
             [@table]
           ]
         end
@@ -38,8 +39,8 @@ module Hold
 
         alias_method :build_update_row, :build_insert_row
 
-        # for now ignoring the columns_mapped_to, since Identity mapper is the only
-        # one for which this matters at present
+        # for now ignoring the columns_mapped_to, since Identity mapper is the
+        # only one for which this matters at present
 
         def make_filter(value, _columns_mapped_to = nil)
           { @column_qualified => value }

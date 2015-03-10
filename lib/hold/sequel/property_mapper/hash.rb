@@ -52,7 +52,9 @@ module Hold
         def post_insert(entity, _rows, last_insert_id = nil)
           hash = entity[@property_name] || (return)
           @dataset.multi_insert(hash.map do |k, v|
-            { @foreign_key => last_insert_id, @key_column => k, @value_column => v }
+            { @foreign_key => last_insert_id,
+              @key_column => k,
+              @value_column => v }
           end)
         end
 

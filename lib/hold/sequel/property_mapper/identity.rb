@@ -2,7 +2,8 @@ module Hold
   module Sequel
     class PropertyMapper
       class Identity < PropertyMapper
-        def columns_aliases_and_tables_for_select(preferred_table = @repository.main_table)
+        def columns_aliases_and_tables_for_select(preferred_table = nil)
+          preferred_table ||= @repository.main_table
           qualified = qualified_column_name(preferred_table)
           [[qualified], [qualified.as(:id)], [preferred_table]]
         end

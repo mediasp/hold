@@ -1,7 +1,7 @@
 module Hold
   module Sequel
-    # Maps to an associated object which is fetched by id from a target repository
-    # using a foriegn key column
+    # Maps to an associated object which is fetched by id from a target
+    # repository using a foriegn key column
     class PropertyMapper
       class ForeignKey < PropertyMapper
         def self.setter_dependencies_for(model_class:)
@@ -15,10 +15,11 @@ module Hold
                     :column_name, :table, :column_qualified, :auto_store_new,
                     :model_class
 
-        # auto_store_new: where the value for this property is an object without an
-        # ID, automatically store_new the object in the target_repo before trying to
-        # store the object in question with this foreign key property. In the
-        # absence of this setting, values without an ID will cause an exception
+        # auto_store_new: where the value for this property is an object without
+        # an ID, automatically store_new the object in the target_repo before
+        # trying to store the object in question with this foreign key property.
+        # In the absence of this setting, values without an ID will cause an
+        # exception
         def initialize(repo, property_name,
                        model_class:, table: nil, auto_store_new: false,
                        column_name: :"#{property_name}_id")
@@ -31,7 +32,8 @@ module Hold
             ::Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
           @columns_aliases_and_tables_for_select = [
             [@column_qualified],
-            [::Sequel::SQL::AliasedExpression.new(@column_qualified, @column_alias)],
+            [::Sequel::SQL::AliasedExpression
+             .new(@column_qualified, @column_alias)],
             [@table]
           ]
 
@@ -50,8 +52,8 @@ module Hold
             if @auto_store_new
               target_repo.store_new(value)
             else
-              fail "value for ForeignKey mapped property #{@property_name} has "\
-                ' no id, and :auto_store_new not specified'
+              fail "value for ForeignKey mapped property #{@property_name} "\
+                'has no id, and :auto_store_new not specified'
             end
           end
         end
@@ -72,8 +74,8 @@ module Hold
         end
         alias_method :build_update_row, :build_insert_row
 
-        # for now ignoring the columns_mapped_to, since Identity mapper is the only
-        # one for which this matters at present
+        # for now ignoring the columns_mapped_to, since Identity mapper is the
+        # only one for which this matters at present
 
         def make_filter(value, _columns_mapped_to = nil)
           { @column_qualified => value && value.id }

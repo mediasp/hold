@@ -3,32 +3,33 @@ module Hold
     # Maps to an array of associated objects stored in another repo, which has a
     # foreign_key-mapped property pointing at instances of our model class.
     #
-    # By default these properties aren't writeable - when they are writeable, the
-    # values are treated like wholy-owned sub-components of the parent object.
+    # By default these properties aren't writeable - when they are writeable,
+    # the values are treated like wholy-owned sub-components of the parent
+    # object.
     #
     # So, objects which are values of this property are:
     #   - Created after the parent object is created
-    #   - Created/updated/deleted as appropriate after this property on the parent
-    #     object is updated
+    #   - Created/updated/deleted as appropriate after this property on the
+    #     parent object is updated
     #   - Deleted before the parent object is deleted (unless
     #     :manual_cascade_delete => false is specified hinting that ON CASCADE
     #     DELETE is set on the foreign key so we needn't bother)
     #
     # On update:
-    # We allow you to re-order and/or update the existing values while maintaining
-    # their identities, remove some objects which were in the collection before
-    # (which get deleted) and possibly throw in new objects too (which get
-    # created), but you can't throw something in there which was previously
-    # attached to some other object, for the same reason that this doesn't fly on
-    # insert.
+    # We allow you to re-order and/or update the existing values while
+    # maintaining their identities, remove some objects which were in the
+    # collection before (which get deleted) and possibly throw in new objects
+    # too (which get created), but you can't throw something in there which was
+    # previously attached to some other object, for the same reason that this
+    # doesn't fly on insert.
     #
     # If you specify a denormalized_count_column, this will be used to store the
     # count of associated objects on a column on the main table of the parent
     # object.
     class PropertyMapper
       class OneToMany < PropertyMapper
-        def self.setter_dependencies_for(options = {})
-          features = [*options[:model_class]].map { |klass| [:get_class, klass] }
+        def self.setter_dependencies_for(model_class: nil)
+          features = [Array(model_class)].map { |klass| [:get_class, klass] }
           { target_repo: [IdentitySetRepository, *features] }
         end
 
@@ -62,19 +63,20 @@ module Hold
         end
 
         def foreign_key_mapper
-          @foreign_key_mapper ||= begin
-                                    mapper = target_repo.mapper(@foreign_key_property_name)
-                                    unless mapper.is_a?(PropertyMapper::ForeignKey)
-                                      fail 'OneToManyMapper: Expected ForeignKey mapper with name ' \
-                                        "#{@foreign_key_property_name}"
-                                    end
-                                    unless mapper.target_repo.can_get_class?(@repository.model_class)
-                                      fail "OneToManyMapper: ForeignKey mapper's target repo "\
-                                        "#{mapper.target_repo.inspect} can't get our repository's"\
-                                        " model_class #{@repository.model_class}"
-                                    end
-                                    mapper
-                                  end
+          @foreign_key_mapper ||=
+            begin
+              mapper = target_repo.mapper(@foreign_key_property_name)
+              unless mapper.is_a?(PropertyMapper::ForeignKey)
+                fail 'OneToManyMapper: Expected ForeignKey mapper with name ' \
+                  "#{@foreign_key_property_name}"
+              end
+              unless mapper.target_repo.can_get_class?(@repository.model_class)
+                fail "OneToManyMapper: ForeignKey mapper's target repo "\
+                  "#{mapper.target_repo.inspect} can't get our repository's"\
+                  " model_class #{@repository.model_class}"
+              end
+              mapper
+            end
         end
 
         def load_value(_row, id, properties = nil)
@@ -86,7 +88,8 @@ module Hold
 
             dataset = dataset.filter(filter)
             if @order_property
-              dataset = dataset.order Sequel.send(@order_direction, @order_property)
+              dataset = dataset
+                        .order(Sequel.send(@order_direction, @order_property))
             end
 
             dataset
@@ -99,10 +102,12 @@ module Hold
 
           query = target_repo.query(properties) do |dataset, mapping|
             filter = foreign_key_mapper
-                     .make_filter_by_ids(ids, mapping[@foreign_key_property_name])
+                     .make_filter_by_ids(ids,
+                                         mapping[@foreign_key_property_name])
             dataset = dataset
                       .filter(filter)
-                      .select(foreign_key_mapper.column_qualified.as(:_one_to_many_id))
+                      .select(foreign_key_mapper
+                              .column_qualified.as(:_one_to_many_id))
 
             if @order_property
               dataset = dataset.order(:_one_to_many_id,
@@ -115,18 +120,22 @@ module Hold
 
           groups = []
           id_to_group = {}
-          ids.each_with_index { |id, index| id_to_group[id] = groups[index] = [] }
+
+          ids.each_with_index do |id, index|
+            id_to_group[id] = groups[index] = []
+          end
+
           query.results_with_rows.each do |entity, row|
             id_to_group[row[:_one_to_many_id]] << entity
           end
           groups.each_with_index { |id, index| yield id, index }
         end
 
-        # adds a join to the target_repo's table, onto a dataset from the mapper's
-        # repository.
+        # adds a join to the target_repo's table, onto a dataset from the
+        # mapper's repository.
         def add_join(dataset)
-          # FIXME: doesn't take any care to pick a unique alias for the table when
-          # joining to it
+          # FIXME: doesn't take any care to pick a unique alias for the table
+          # when joining to it
           # FIXME: doesn't use mapping to determine id_column
 
           dataset
@@ -135,21 +144,23 @@ module Hold
             @repository.identity_mapper.column_name)
         end
 
-        # help the parent repo find instances whose value for this property contains
-        # a particular member. since we're one-to-many rather than many-to-many,
-        # this is relatively simple. we just get the foreign key property on the
-        # proposed member, see if it's set to anything, and if so if that thing
-        # exists within our repo. if it does then it's the only such object, because
-        # the member's foreign key can only point at one thing.
+        # help the parent repo find instances whose value for this property
+        # contains a particular member. since we're one-to-many rather than
+        # many-to-many, this is relatively simple. we just get the foreign key
+        # property on the proposed member, see if it's set to anything, and if
+        # so if that thing exists within our repo. if it does then it's the only
+        # such object, because the member's foreign key can only point at one
+        # thing.
         def get_many_by_member(member)
           if member.key?(@foreign_key_property_name)
             object = member[@foreign_key_property_name]
             # we might not actually contain it
             [object] if object && @repository.contains?(object)
           else
-            object = target_repo.get_property(member, @foreign_key_property_name)
-            # we know we contain it since the target_repo's foreign_key_mapper has
-            # us as its target_repo
+            object = target_repo
+                     .get_property(member, @foreign_key_property_name)
+            # we know we contain it since the target_repo's foreign_key_mapper
+            # has us as its target_repo
             [object] if object
           end
         end
@@ -169,9 +180,9 @@ module Hold
 
           # save the assocatied objects!
           values.each_with_index do |value, index|
-            # if we allowed this you would potentially be detaching the object from
-            # its previous parent, but then we'd have to apply hooks etc to that
-            # object too, so rather avoid:
+            # if we allowed this you would potentially be detaching the object
+            # from its previous parent, but then we'd have to apply hooks etc to
+            # that object too, so rather avoid:
             fail "OneToMany mapper for #{@property_name}: already-persisted "\
               'values are not supported on insert' if value.id
             set_foreign_key_and_order_properties_on_value(entity, value, index)
@@ -180,33 +191,35 @@ module Hold
         end
 
         def set_foreign_key_and_order_properties_on_value(entity, value, index)
-          # ensure their corresponding foreign key mapped property points back at us
+          # ensure their corresponding foreign key mapped property points back
+          # at us
           if (existing_value = value[@foreign_key_property_name])
-            # the associated object has a foreign key mapped property pointing at
-            # something else.
+            # the associated object has a foreign key mapped property pointing
+            # at something else.
             #
-            # we could have config to allow it to go and update the foreign key in
-            # cases like this, but could be messy in the presence of order columns
-            # etc.
+            # we could have config to allow it to go and update the foreign key
+            # in cases like this, but could be messy in the presence of order
+            # columns etc.
             unless existing_value == entity
               fail 'OneToMany mapper: one of the values for mapped property '\
-                "#{@property_name} has an existing value for the corresponding "\
-                "#{@foreign_key_property_name} property which is not equal to our "\
-                ' good selves'
+                "#{@property_name} has an existing value for the "\
+                "corresponding #{@foreign_key_property_name} property which "\
+                'is not equal to our good selves'
             end
           else
             value[@foreign_key_property_name] = entity
           end
 
-          # ensure their order_property corresponds to their order in the array, at
-          # least for new members. (in an update, existing members may change order)
+          # ensure their order_property corresponds to their order in the
+          # array, at least for new members. (in an update, existing members
+          # may change order)
           if @order_property == :position
             if !value.id && (existing_index = value[@order_property])
               unless existing_index == index
                 fail 'OneToMany mapper: one of the new values for mapped '\
-                  "property #{@property_name} has an existing value for the order "\
-                  "property #{@order_property} property which is not equal to its "\
-                  'index in the array'
+                  "property #{@property_name} has an existing value for the "\
+                  "order property #{@order_property} property which is not "\
+                  'equal to its index in the array'
               end
             else
               value[@order_property] = index
@@ -215,9 +228,11 @@ module Hold
         end
 
         def pre_update(entity, update_entity)
-          # if an update is specified for this property, find out what the existing
-          # values are first:
-          load_value(nil, entity.id) if @writeable && update_entity[@property_name]
+          # if an update is specified for this property, find out what the
+          # existing values are first:
+          if @writeable && update_entity[@property_name]
+            load_value(nil, entity.id)
+          end
         end
 
         def build_update_row(entity, table, row, _id = nil)
@@ -233,13 +248,14 @@ module Hold
           return unless @writeable
           update_values = update_entity[@property_name] || (return)
           # delete any values which are no longer around:
-          (values_before - update_values).each { |value| target_repo.delete(value) }
+          (values_before - update_values)
+            .each { |value| target_repo.delete(value) }
           # insert any new ones / update any existing ones which remain:
           update_values.each_with_index do |value, index|
             if value.id && !values_before.include?(value)
-              fail 'OneToMany mapper: already-persisted values are only allowed '\
-                'for property update where they were already a value of the '\
-                'property beforehand'
+              fail 'OneToMany mapper: already-persisted values are only '\
+                'allowed for property update where they were already a value '\
+                'of the property beforehand'
             end
 
             set_foreign_key_and_order_properties_on_value(entity, value, index)

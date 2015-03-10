@@ -172,28 +172,30 @@ end
         !!@id_sequence_table
       end
 
-      # is this repository capable of loading instances of the given model class?
+      # is this repository capable of loading instances of the given model
+      # class?
       # repositories which support polymorhpic loading may override this.
       def can_get_class?(model_class)
         model_class == self.model_class
       end
 
-      # is this repository capable of storing instances of the given model class?
+      # is this repository capable of storing instances of the given model
+      # class?
       # repositories which support polymorhpic writes may override this.
       def can_set_class?(model_class)
         model_class == self.model_class
       end
 
-      # see Hold::Sequel::RepositoryObserver for the interface you need to expose
-      # to be an observer here.
+      # see Hold::Sequel::RepositoryObserver for the interface you need to
+      # expose to be an observer here.
       #
       # If you're using Wirer to construct the repository, a better way to hook
       # the repo up with observers is to add RepositoryObservers to the
       # Wirer::Container and have them provide feature
       # [:observes_repo_for_class, model_class].
       #
-      # They'll then get picked up by our multiple setter_dependency and added as
-      # an observer just after construction.
+      # They'll then get picked up by our multiple setter_dependency and added
+      # as an observer just after construction.
       def add_observer(observer)
         @observers ||= []
         @observers << observer
@@ -207,8 +209,8 @@ end
       end
 
       # if you want to avoid the need to manually pass in target_repo parameters
-      # for each property mapped by a foreign key mapper etc - this will have the
-      # mappers go find the dependency themselves.
+      # for each property mapped by a foreign key mapper etc - this will have
+      # the mappers go find the dependency themselves.
       def get_repo_dependencies_from(repo_set)
         @property_mappers.each_value do |mapper|
           mapper.get_repo_dependencies_from(repo_set)
@@ -330,8 +332,8 @@ end
         # the identity mapper gets called last, so that it can get a hint about
         # what tables are already required for the other columns. (seeing as how
         # an identity column needs to be present on every table used for a given
-        # repo, it should never need to add an extra table just in order to select
-        # the ID)
+        # repo, it should never need to add an extra table just in order to
+        # select the ID)
         id_cols, id_aliases, id_tables =
           @identity_mapper
           .columns_aliases_and_tables_for_select(tables.first || @main_table)
@@ -352,7 +354,9 @@ end
       # queries.
 
       def query(properties = nil, &b)
-        properties = @default_properties if properties == true || properties.nil?
+        if properties == true || properties.nil?
+          properties = @default_properties
+        end
         Query.new(self, properties, &b)
       end
 
@@ -378,11 +382,13 @@ end
         end
         begin
           result =
-            query(property => options[:properties]) do |dataset, property_columns|
-              filter = @identity_mapper
-                       .make_filter(entity.id, property_columns[@identity_property])
-              dataset.filter(filter)
-            end.single_result
+            query(property =>
+                  options[:properties]) do |dataset, property_columns|
+                    filter = @identity_mapper
+                             .make_filter(entity.id,
+                                          property_columns[@identity_property])
+                    dataset.filter(filter)
+                  end.single_result
         rescue TypeError
           # catches test errors caught by []ing a string post 1.8
           raise ArgumentError, 'get_property caught a type error, check options'
@@ -428,7 +434,9 @@ end
         properties_to_fetch ||= @default_properties.dup
         properties_to_fetch[property] = true
         query(options[:properties]) do |dataset, property_columns|
-          filter = mapper(property).make_filter(value, property_columns[property])
+          filter = mapper(property)
+                   .make_filter(value, property_columns[property])
+
           dataset.filter(filter)
         end.to_a(options[:lazy])
       end
@@ -455,8 +463,8 @@ end
       # Where the repo allocates_ids, you can supply an entity without an ID and
       # store_new will be called.
       #
-      # If the entity has an ID, it will check whether it's currently contained in
-      # the repository before calling store_new or update as appropriate.
+      # If the entity has an ID, it will check whether it's currently contained
+      # in the repository before calling store_new or update as appropriate.
       def store(entity)
         id = entity.id
         if id
@@ -483,8 +491,8 @@ end
       # obtained is passed when building subsequent rows.
       #
       # note: order of inserts is important here if you have foreign key
-      # dependencies between the ID columns of the different tables; if so you'll
-      # need to order your use_table declarations accordingly.
+      # dependencies between the ID columns of the different tables; if so
+      # you'll need to order your use_table declarations accordingly.
       def store_new(entity)
         transaction do
           rows = {}
@@ -493,7 +501,9 @@ end
           @property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
           if @id_sequence_table
             row = insert_row_for_entity(entity, @id_sequence_table)
-            insert_id = translate_exceptions { @db[@id_sequence_table].insert(row) }
+            insert_id = translate_exceptions do
+              @db[@id_sequence_table].insert(row)
+            end
             rows[@id_sequence_table] = row
           end
           # note: order is important here if you have foreign key dependencies,
@@ -504,8 +514,8 @@ end
             translate_exceptions { @db[table].insert(row) }
             rows[table] = row
           end
-          # identity_mapper should be called first, so that other mappers have the
-          # new ID available on the entity when called.
+          # identity_mapper should be called first, so that other mappers have
+          # the new ID available on the entity when called.
           @identity_mapper.post_insert(entity, rows, insert_id)
           @property_mappers.each_value do |mapper|
             next if mapper == @identity_mapper
@@ -543,13 +553,12 @@ end
           end
 
           rows = @tables.each_with_object({}) do |table, hash|
-            hash[table] = update_row_for_entity(update_entity, table).tap do |row|
-              unless row.empty?
-                id_filter = @identity_mapper
-                            .make_filter(id, [@tables_id_columns[table]])
-                translate_exceptions { @db[table].filter(id_filter).update(row) }
-              end
-            end
+            hash[table] = row = update_row_for_entity(update_entity, table)
+            next if row.empty?
+            id_filter = @identity_mapper
+                        .make_filter(id, [@tables_id_columns[table]])
+
+            translate_exceptions { @db[table].filter(id_filter).update(row) }
           end
           @property_mappers.each do |name, mapper|
             mapper
@@ -589,8 +598,8 @@ end
       # note: order of
       # deletes is important here if you have foreign key dependencies between
       # the ID columns of the different tables; this goes in the reverse order
-      # to that used for inserts by store_new, which in turn is determined by the
-      # order of your use_table declarations
+      # to that used for inserts by store_new, which in turn is determined by
+      # the order of your use_table declarations
       def delete(entity)
         id = entity.id || (fail Hold::MissingIdentity)
         transaction do
