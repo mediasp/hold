@@ -42,20 +42,17 @@ module Hold
         end
 
         def load_value(row, _id = nil, properties = nil)
-          if (fkey = row[@column_alias])
+          (fkey = row[@column_alias]) &&
             target_repo.get_by_id(fkey, properties: properties)
-          end
         end
 
         def ensure_value_has_id_where_present(value)
-          if value && !value.id
-            if @auto_store_new
-              target_repo.store_new(value)
-            else
-              fail "value for ForeignKey mapped property #{@property_name} "\
-                'has no id, and :auto_store_new not specified'
-            end
-          end
+          if @auto_store_new
+            target_repo.store_new(value)
+          else
+            fail "value for ForeignKey mapped property #{@property_name} "\
+              'has no id, and :auto_store_new not specified'
+          end if value && !value.id
         end
 
         def pre_insert(entity)
@@ -67,10 +64,8 @@ module Hold
         end
 
         def build_insert_row(entity, table, row, _id = nil)
-          if @table == table && entity.key?(@property_name)
-            value = entity[@property_name]
-            row[@column_name] = value && value.id
-          end
+          (value = entity[@property_name]) &&
+            row[@column_name] = value && value.id if @table == table
         end
         alias_method :build_update_row, :build_insert_row
 

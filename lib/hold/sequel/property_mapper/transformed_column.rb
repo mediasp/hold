@@ -24,9 +24,9 @@ module Hold
         end
 
         def build_insert_row(entity, table, row, _id = nil)
-          if @table == table && entity.key?(@property_name)
-            row[@column_name] = to_sequel(entity[@property_name])
-          end
+          row[@column_name] =
+            to_sequel(entity[@property_name]) if @table == table &&
+                                                 entity.key?(@property_name)
         end
 
         alias_method :build_update_row, :build_insert_row

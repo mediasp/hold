@@ -9,7 +9,7 @@ module Hold
       end
 
       def allocates_ids?
-        !!@id_seq
+        !@id_seq.nil?
       end
 
       def store(object)

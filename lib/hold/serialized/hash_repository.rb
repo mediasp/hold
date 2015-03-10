@@ -29,9 +29,8 @@ module Hold
       end
 
       def get_with_key(key)
-        if (json = @cache.get_with_key(cache_key(key)))
+        (json = @cache.get_with_key(cache_key(key))) &&
           @serializer.deserialize(json)
-        end
       end
 
       def get_many_with_keys(keys)

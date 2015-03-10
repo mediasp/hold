@@ -213,26 +213,23 @@ module Hold
           # ensure their order_property corresponds to their order in the
           # array, at least for new members. (in an update, existing members
           # may change order)
-          if @order_property == :position
-            if !value.id && (existing_index = value[@order_property])
-              unless existing_index == index
-                fail 'OneToMany mapper: one of the new values for mapped '\
-                  "property #{@property_name} has an existing value for the "\
-                  "order property #{@order_property} property which is not "\
-                  'equal to its index in the array'
-              end
-            else
-              value[@order_property] = index
+          if !value.id && (existing_index = value[@order_property])
+            unless existing_index == index
+              fail 'OneToMany mapper: one of the new values for mapped '\
+                "property #{@property_name} has an existing value for the "\
+                "order property #{@order_property} property which is not "\
+                'equal to its index in the array'
             end
-          end
+          else
+            value[@order_property] = index
+          end if @order_property == :position
         end
 
         def pre_update(entity, update_entity)
           # if an update is specified for this property, find out what the
           # existing values are first:
-          if @writeable && update_entity[@property_name]
-            load_value(nil, entity.id)
-          end
+          load_value(nil, entity.id) if @writeable &&
+                                        update_entity[@property_name]
         end
 
         def build_update_row(entity, table, row, _id = nil)

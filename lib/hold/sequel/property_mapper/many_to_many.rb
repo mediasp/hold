@@ -176,9 +176,8 @@ module Hold
 
         def post_insert(entity, _rows, insert_id)
           return unless @writeable
-          if (values = entity[@property_name])
+          (values = entity[@property_name]) &&
             insert_join_table_rows(entity, insert_id, values)
-          end
         end
 
         def post_update(entity, update_entity, _rows, _res_pre_update = nil)

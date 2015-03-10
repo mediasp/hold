@@ -36,13 +36,10 @@ module Hold
       end
 
       def get_by_id(id)
-        json = @cache.get_with_key(cache_key(id))
-        if json
-          string_hash = @serializer.deserialize(json)
-          string_hash.each_with_object({}) do |(k, v), memo|
+        (json = @cache.get_with_key(cache_key(id))) &&
+          @serializer.deserialize(json).each_with_object({}) do |(k, v), memo|
             memo[k.to_sym] = v
           end
-        end
       end
 
       def delete_id(id)

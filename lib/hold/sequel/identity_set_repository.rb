@@ -165,7 +165,7 @@ end
       end
 
       def allocates_ids?
-        !!@id_sequence_table
+        !@id_sequence_table.nil?
       end
 
       # is this repository capable of loading instances of the given model

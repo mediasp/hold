@@ -32,9 +32,8 @@ module Hold
         end
 
         def build_insert_row(entity, table, row, _id = nil)
-          if @table == table && entity.key?(@property_name)
-            row[@column_name] = entity[@property_name]
-          end
+          (value = entity[@property_name]) &&
+            row[@column_name] = value if @table == table
         end
 
         alias_method :build_update_row, :build_insert_row
