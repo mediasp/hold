@@ -46,6 +46,7 @@ module Hold
         begin
           ::File.read(path)
         rescue Errno::ENOENT
+          nil
         end
       end
 
@@ -54,6 +55,7 @@ module Hold
         begin
           ::File.unlink(path)
         rescue Errno::ENOENT
+          nil
         end
       end
 
