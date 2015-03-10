@@ -93,7 +93,7 @@ module Hold
           end.to_a
         end
 
-        def load_values(_rows, ids = nil, properties = nil, &b)
+        def load_values(_rows, ids = nil, properties = nil)
           properties = (properties || target_repo.default_properties)
                        .merge(@extra_properties)
 
@@ -113,12 +113,13 @@ module Hold
             dataset
           end
 
-          groups = []; id_to_group = {}
+          groups = []
+          id_to_group = {}
           ids.each_with_index { |id, index| id_to_group[id] = groups[index] = [] }
           query.results_with_rows.each do |entity, row|
             id_to_group[row[:_one_to_many_id]] << entity
           end
-          groups.each_with_index(&b)
+          groups.each_with_index { |id, index| yield id, index }
         end
 
         # adds a join to the target_repo's table, onto a dataset from the mapper's

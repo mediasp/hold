@@ -315,7 +315,9 @@ end
       end
 
       def columns_aliases_and_tables_for_properties(properties)
-        columns_by_property = {}; aliased_columns = []; tables = []
+        columns_by_property = {}
+        aliased_columns = []
+        tables = []
         properties.each do |p|
           next if p == @identity_property # this gets special handling
           cs, as, ts = mapper(p).columns_aliases_and_tables_for_select
@@ -337,7 +339,8 @@ end
         columns_by_property[@identity_property] = id_cols
         aliased_columns.concat(id_aliases)
         tables.concat(id_tables)
-        aliased_columns.uniq!; tables.uniq!
+        aliased_columns.uniq!
+        tables.uniq!
         [columns_by_property, aliased_columns, tables]
       end
 
@@ -484,7 +487,8 @@ end
       # need to order your use_table declarations accordingly.
       def store_new(entity)
         transaction do
-          rows = {}; insert_id = nil
+          rows = {}
+          insert_id = nil
           pre_insert(entity)
           @property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
           if @id_sequence_table

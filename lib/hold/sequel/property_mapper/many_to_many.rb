@@ -116,7 +116,8 @@ module Hold
             dataset
           end
 
-          groups = []; id_to_group = {}
+          groups = []
+          id_to_group = {}
           ids.each_with_index { |id, index| id_to_group[id] = groups[index] = [] }
           query.results_with_rows.each do |entity, row|
             id_to_group[row[:_many_to_many_id]] << entity
@@ -142,7 +143,8 @@ module Hold
           rows = []
           values.each_with_index do |value, index|
             value_id = value.id || if @auto_store_new
-                                     target_repo.store_new(value); value.id
+                                     target_repo.store_new(value)
+                                     value.id
                                    else
                                      fail 'value for ManyToMany mapped property'\
                                        "#{@property_name} has no id, and "\
