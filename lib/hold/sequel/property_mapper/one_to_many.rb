@@ -191,8 +191,13 @@ module Hold
         end
 
         def set_foreign_key_and_order_properties_on_value(entity, value, index)
-          # ensure their corresponding foreign key mapped property points back
-          # at us
+          set_foreign_key(entity, value)
+          set_order_property(value, index)
+        end
+
+        # ensure their corresponding foreign key mapped property points back at
+        # us
+        def set_foreign_key(entity, value)
           if (existing_value = value[@foreign_key_property_name])
             # the associated object has a foreign key mapped property pointing
             # at something else.
@@ -201,24 +206,20 @@ module Hold
             # in cases like this, but could be messy in the presence of order
             # columns etc.
             unless existing_value == entity
-              fail 'OneToMany mapper: one of the values for mapped property '\
-                "#{@property_name} has an existing value for the "\
-                "corresponding #{@foreign_key_property_name} property which "\
-                'is not equal to our good selves'
+              fail ForeignKeyConflict @property_name, @foreign_key_property_name
             end
           else
             value[@foreign_key_property_name] = entity
           end
+        end
 
-          # ensure their order_property corresponds to their order in the
-          # array, at least for new members. (in an update, existing members
-          # may change order)
+        # ensure their order_property corresponds to their order in the array,
+        # at least for new members. (in an update, existing members may change
+        # order)
+        def set_order_property(value, index)
           if !value.id && (existing_index = value[@order_property])
             unless existing_index == index
-              fail 'OneToMany mapper: one of the new values for mapped '\
-                "property #{@property_name} has an existing value for the "\
-                "order property #{@order_property} property which is not "\
-                'equal to its index in the array'
+              fail OrderPropertyConflict @property_name, @order_property
             end
           else
             value[@order_property] = index
