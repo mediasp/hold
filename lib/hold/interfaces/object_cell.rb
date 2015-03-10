@@ -28,9 +28,10 @@ module Hold
       set(value)
     end
 
-    def has_property?(property_name)
+    def property?(property_name)
       !get_property(property_name).nil?
     end
+    alias_method :has_property?, :property?
 
     def get_properties(*properties)
       properties.map { |p| get_property(p) }

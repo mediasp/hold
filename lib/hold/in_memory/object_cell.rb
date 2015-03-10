@@ -21,10 +21,11 @@ module Hold
         @value.delete(property_name)
       end
 
-      def has_property?(property_name)
+      def property?(property_name)
         fail EmptyConflict unless @value
         @value.key?(property_name)
       end
+      alias_method :has_property?, :property?
     end
   end
 end

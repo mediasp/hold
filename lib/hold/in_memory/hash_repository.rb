@@ -19,10 +19,10 @@ module Hold
         @hash.delete(key)
       end
 
-      def has_key?(key)
+      def key?(key)
         @hash.key?(key)
       end
-      alias_method :key?, :has_key?
+      alias_method :has_key?, :key?
     end
   end
 end
