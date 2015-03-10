@@ -2,15 +2,13 @@ require 'wirer'
 
 module Hold
   module Sequel
-    def self.IdentitySetRepository(model_class, main_table = nil, &block)
+    def self.IdentitySetRepository(model_class, main_table = nil)
       Class.new(IdentitySetRepository) do
         set_model_class model_class
 
-        if main_table
-          use_table(main_table, id_column: :id, id_sequence: true)
-        end
+        use_table(main_table, id_column: :id, id_sequence: true) if main_table
 
-        class_eval(&block) if block
+        yield self if block_given?
       end
     end
 
@@ -81,8 +79,6 @@ module Hold
             instance.mapper(mapper_name.to_sym).send("#{dep_name}=", value)
           end
         end
-
-        private
 
         def set_model_class(model_class)
           @model_class = model_class

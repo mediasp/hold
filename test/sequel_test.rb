@@ -19,9 +19,9 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       varchar :abc
       varchar :def
     end
-    Hold::Sequel::IdentitySetRepository(AbcDef, :test_table) do
-      map_column :abc
-      map_column :def
+    Hold::Sequel::IdentitySetRepository(AbcDef, :test_table) do |repo|
+      repo.map_column :abc
+      repo.map_column :def
     end.new(@db)
   end
 
@@ -118,7 +118,9 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :string, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {map_column :string}.new(@db)
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do |r|
+        r.map_column :string
+      end.new(@db)
       entity = @model_class.new(string: 'foo')
       repo.store(entity)
       assert_equal 'foo', @db[:test_table].select(:string).filter(id: entity.id).single_value
@@ -132,8 +134,8 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :string_column_with_particular_name, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do
-        map_column :string, column_name: :string_column_with_particular_name
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do |r|
+        r.map_column :string, column_name: :string_column_with_particular_name
       end.new(@db)
       entity = @model_class.new(string: 'foo')
       repo.store(entity)
@@ -150,11 +152,11 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         float :float
       end
       @model_class = ThinModels::StructWithIdentity(:integer, :datetime, :float)
-      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
-        map_column :integer
-        map_column :datetime
-        map_column :float
-      }.new(@db)
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do |r|
+        r.map_column :integer
+        r.map_column :datetime
+        r.map_column :float
+      end.new(@db)
       entity = @model_class.new(
         integer: 123,
         datetime: Time.utc(2000, 1, 2, 12, 30),
@@ -180,11 +182,11 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :foo, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:foo)
-      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
-        map_transformed_column :foo,
-        to_sequel: proc { |v| v.join(',') },
-        from_sequel: proc { |v| v.split(',') }
-      }.new(@db)
+      repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do |r|
+        r.map_transformed_column :foo,
+          to_sequel: proc { |v| v.join(',') },
+          from_sequel: proc { |v| v.split(',') }
+      end.new(@db)
       entity = @model_class.new(foo: ['a', 'b', 'c'])
       repo.store(entity)
       assert_equal 'a,b,c', @db[:test_table].select(:foo).filter(id: entity.id).single_value
@@ -201,11 +203,11 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         datetime :updated_at, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:created_at, :updated_at)
-      @repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) {
+      @repo = Hold::Sequel::IdentitySetRepository(@model_class, :test_table) do |repo|
         # the args here can all actually be left out as they're the defaults, but to demonstrate:
-        map_created_at :created_at
-        map_updated_at :updated_at, column_name: :updated_at
-      }.new(@db)
+        repo.map_created_at :created_at
+        repo.map_updated_at :updated_at, column_name: :updated_at
+      end.new(@db)
     end
 
     it 'sets created_at and updated_at to the current time when first storing an object, also setting the values on the entity instance used' do
@@ -249,12 +251,12 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       end
       bar_model_class = @bar_model_class = ThinModels::StructWithIdentity(:string)
       @foo_model_class = ThinModels::StructWithIdentity(:bar)
-      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) {
-        map_column :string
-      }.new(@db)
-      @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) {
-        map_foreign_key :bar, model_class: bar_model_class
-      }.new(@db)
+      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) do |repo|
+        repo.map_column :string
+      end.new(@db)
+      @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) do |repo|
+        repo.map_foreign_key :bar, model_class: bar_model_class
+      end.new(@db)
       @foo_repo.mapper(:bar).target_repo = @bar_repo
     end
 
@@ -359,11 +361,11 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       bar_model_class = @bar_model_class = Bar #ThinModels::StructWithIdentity(:foos)
       foo_model_class = @foo_model_class = Foo #ThinModels::StructWithIdentity(:bar)
       # foo_repo = 123
-      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) do
-        map_one_to_many :foos, model_class: foo_model_class, property: :bar
+      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository(@bar_model_class, :bar) do |repo|
+        repo.map_one_to_many :foos, model_class: foo_model_class, property: :bar
       end.new(@db)
-      foo_repo = @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) do
-        map_foreign_key :bar, model_class: bar_model_class
+      foo_repo = @foo_repo = Hold::Sequel::IdentitySetRepository(@foo_model_class, :foo) do |repo|
+        repo.map_foreign_key :bar, model_class: bar_model_class
       end.new(@db)
 
       bar_repo.mapper(:foos).target_repo = foo_repo
@@ -467,11 +469,11 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         integer :base_id
         varchar :def
       end
-      Hold::Sequel::IdentitySetRepository(AbcDef, :base) do
-        use_table :base
-        use_table :extra, id_column: :base_id
-        map_column :abc
-        map_column :def, table: :extra
+      Hold::Sequel::IdentitySetRepository(AbcDef, :base) do |repo|
+        repo.use_table :base
+        repo.use_table :extra, id_column: :base_id
+        repo.map_column :abc
+        repo.map_column :def, table: :extra
       end.new(@db)
     end
   end
