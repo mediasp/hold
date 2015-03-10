@@ -10,13 +10,9 @@ module Hold
         @value = value unless ARG_EMPTY.equal?(value)
       end
 
-      def get
-        @value
-      end
-
-      def set(value)
-        @value = value
-      end
+      attr_accessor :value
+      alias_method :set, :value=
+      alias_method :get, :value
 
       def empty?
         !instance_variable_defined?(:@value)

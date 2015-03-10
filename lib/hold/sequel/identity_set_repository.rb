@@ -80,9 +80,8 @@ module Hold
           end
         end
 
-        def set_model_class(model_class)
-          @model_class = model_class
-        end
+        attr_writer :model_class
+        alias_method :set_model_class, :model_class=
 
         def use_table(name, options = {})
           options[:id_column] ||= :id
