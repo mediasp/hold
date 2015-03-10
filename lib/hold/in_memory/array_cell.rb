@@ -15,13 +15,15 @@ module Hold
         @array.replace(value)
       end
 
-      def get_slice(start, length)
+      def slice(start, length)
         @array[start, length]
       end
+      alias_method :get_slice, :slice
 
-      def get_length
+      def length
         @array.length
       end
+      alias_method :get_length, :length
     end
   end
 end

@@ -56,7 +56,7 @@ module Hold
             @type_to_class_mapping = mapping.invert
           end
 
-          def set_model_class(model_class)
+          def model_class=(model_class)
             @model_class = model_class
             unless class_to_type_mapping
               fail 'set_type_column before set_model_class'
@@ -69,6 +69,8 @@ module Hold
                                      class_to_type_mapping.values_at(*klasses)
                                    end
           end
+
+          alias_method :set_model_class, :model_class=
         end
 
         def initialize(db)

@@ -24,22 +24,6 @@ module Hold
       fail UnsupportedOperation
     end
 
-    def set_if_empty(value)
-      fail EmptyConflict unless empty?
-      set(value)
-    end
-
-    def set_unless_empty(value)
-      fail EmptyConflict if empty?
-      set(value)
-    end
-
-    def get_unless_empty
-      fail EmptyConflict if empty?
-      get
-    end
-    alias_method :get!, :get_unless_empty
-
     # Can override to indicate if you only support getting/setting a particular
     # class or classes:
     def can_get_class?(_class)

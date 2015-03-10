@@ -29,9 +29,10 @@ module Hold
         @by_id.include?(id)
       end
 
-      def get_all
+      def all
         @by_id.values
       end
+      alias_method :get_all, :all
 
       def get_by_id(id)
         (value = @by_id[id]) && value.dup

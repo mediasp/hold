@@ -6,19 +6,22 @@ module Hold
   module ArrayCell
     include Cell
 
-    def get_slice(start, length)
+    def slice(start, length)
       (value = get) && value[start, length]
     end
+    alias_method :get_slice, :slice
 
-    def get_length
+    def length
       (value = get) && value.length
     end
+    alias_method :get_length, :length
 
     # returns an instance of ThinModels::LazyArray which lazily computes slices
     # and length based on the get_length and get_slice methods you define.
-    def get_lazy_array
+    def lazy_array
       LazyArray.new(self)
     end
+    alias_method :get_lazy_array, :lazy_array
 
     def can_get_class?(klass)
       klass == Array

@@ -19,9 +19,10 @@ module Hold
         @set.include?(value)
       end
 
-      def get_all
+      def all
         @set.to_a
       end
+      alias_method :get_all, :all
     end
   end
 end
