@@ -41,6 +41,7 @@ module Hold
       true
     end
 
+    # Lazy array
     class LazyArray < ThinModels::LazyArray::Memoized
       def initialize(array_cell)
         @array_cell = array_cell

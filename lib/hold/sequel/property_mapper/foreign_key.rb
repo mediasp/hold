@@ -1,8 +1,8 @@
 module Hold
   module Sequel
-    # Maps to an associated object which is fetched by id from a target
-    # repository using a foriegn key column
     class PropertyMapper
+      # Maps to an associated object which is fetched by id from a target
+      # repository using a foriegn key column
       class ForeignKey < PropertyMapper
         def self.setter_dependencies_for(model_class:)
           features = [Array(model_class)].map { |klass| [:get_class, klass] }

@@ -1,8 +1,8 @@
 module Hold
   module Sequel
-    # A property which is a hash of strings to other primitive values. Persisted
-    # 'all in one go' in a separate table.
     class PropertyMapper
+      # A property which is a hash of strings to other primitive values.
+      # Persisted 'all in one go' in a separate table.
       class Hash < PropertyMapper
         attr_reader :table, :foreign_key, :key_column, :value_column
 

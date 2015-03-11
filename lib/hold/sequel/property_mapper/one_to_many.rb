@@ -1,32 +1,32 @@
 module Hold
   module Sequel
-    # Maps to an array of associated objects stored in another repo, which has a
-    # foreign_key-mapped property pointing at instances of our model class.
-    #
-    # By default these properties aren't writeable - when they are writeable,
-    # the values are treated like wholy-owned sub-components of the parent
-    # object.
-    #
-    # So, objects which are values of this property are:
-    #   - Created after the parent object is created
-    #   - Created/updated/deleted as appropriate after this property on the
-    #     parent object is updated
-    #   - Deleted before the parent object is deleted (unless
-    #     :manual_cascade_delete => false is specified hinting that ON CASCADE
-    #     DELETE is set on the foreign key so we needn't bother)
-    #
-    # On update:
-    # We allow you to re-order and/or update the existing values while
-    # maintaining their identities, remove some objects which were in the
-    # collection before (which get deleted) and possibly throw in new objects
-    # too (which get created), but you can't throw something in there which was
-    # previously attached to some other object, for the same reason that this
-    # doesn't fly on insert.
-    #
-    # If you specify a denormalized_count_column, this will be used to store the
-    # count of associated objects on a column on the main table of the parent
-    # object.
     class PropertyMapper
+      # Maps to an array of associated objects stored in another repo, which has
+      # a foreign_key-mapped property pointing at instances of our model class.
+      #
+      # By default these properties aren't writeable - when they are writeable,
+      # the values are treated like wholy-owned sub-components of the parent
+      # object.
+      #
+      # So, objects which are values of this property are:
+      #   - Created after the parent object is created
+      #   - Created/updated/deleted as appropriate after this property on the
+      #     parent object is updated
+      #   - Deleted before the parent object is deleted (unless
+      #     :manual_cascade_delete => false is specified hinting that ON CASCADE
+      #     DELETE is set on the foreign key so we needn't bother)
+      #
+      # On update:
+      # We allow you to re-order and/or update the existing values while
+      # maintaining their identities, remove some objects which were in the
+      # collection before (which get deleted) and possibly throw in new objects
+      # too (which get created), but you can't throw something in there which
+      # was previously attached to some other object, for the same reason that
+      # this doesn't fly on insert.
+      #
+      # If you specify a denormalized_count_column, this will be used to store
+      # the count of associated objects on a column on the main table of the
+      # parent object.
       class OneToMany < PropertyMapper
         def self.setter_dependencies_for(model_class: nil)
           features = [Array(model_class)].map { |klass| [:get_class, klass] }

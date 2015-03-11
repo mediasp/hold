@@ -1,22 +1,23 @@
 module Hold
   module Sequel
-    # A read-only mapper for properties which are a single instance of a model
-    # class loaded from another repo.
-    #
-    # It allows you to fetch the item via an arbitrary custom query against the
-    # target repository.
-    #
-    # You supply a block which takes the dataset and mapper arguments supplied
-    # by the repository's query_for_version method, but also an additional ID
-    # argument for the ID of the object for which the property is being fetched.
-    #
-    # example:
-    #  map_custom_query_single_value('foo') do |id, dataset, mapping|
-    #    dataset.join(:bar, ...).
-    #      ...
-    #      .filter(:boz_id => id)
-    #  end
     class PropertyMapper
+      # A read-only mapper for properties which are a single instance of a model
+      # class loaded from another repo.
+      #
+      # It allows you to fetch the item via an arbitrary custom query against
+      # the target repository.
+      #
+      # You supply a block which takes the dataset and mapper arguments supplied
+      # by the repository's query_for_version method, but also an additional ID
+      # argument for the ID of the object for which the property is being
+      # fetched.
+      #
+      # example:
+      #  map_custom_query_single_value('foo') do |id, dataset, mapping|
+      #    dataset.join(:bar, ...).
+      #      ...
+      #      .filter(:boz_id => id)
+      #  end
       class CustomQuerySingleValue < PropertyMapper
         def self.setter_dependencies_for(model_class:)
           features = [Array(model_class)].map { |klass| [:get_class, klass] }

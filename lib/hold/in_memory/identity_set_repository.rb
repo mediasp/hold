@@ -1,5 +1,6 @@
 module Hold
   module InMemory
+    # in memory identity set repository
     class IdentitySetRepository
       include Hold::IdentitySetRepository
 

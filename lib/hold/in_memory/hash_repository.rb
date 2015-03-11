@@ -1,5 +1,6 @@
 module Hold
   module InMemory
+    # In memory hash
     class HashRepository
       include Hold::HashRepository
 

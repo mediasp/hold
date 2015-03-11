@@ -1,5 +1,6 @@
 module Hold
   module InMemory
+    # In memory array cell
     class ArrayCell
       include Hold::ArrayCell
 

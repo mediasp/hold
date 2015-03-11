@@ -1,8 +1,8 @@
 module Hold
   module Sequel
-    # A property which is an array of primitive values. Persisted 'all in one
-    # go' in a separate table.
     class PropertyMapper
+      # A property which is an array of primitive values. Persisted 'all in one
+      # go' in a separate table.
       class Array < PropertyMapper
         attr_reader :table, :foreign_key, :value_column
 

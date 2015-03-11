@@ -84,6 +84,7 @@ module Hold
       id_cell(id)
     end
 
+    # Identitey Cell
     class IdCell
       include ObjectCell
 

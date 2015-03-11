@@ -1,41 +1,42 @@
 module Hold
   module Sequel
-    # Maps to an array of associated objects stored in another repo, where a
-    # :join_table exists with columns for:
-    #   - our id property (:left_key)
-    #   - other repo's id property (:right_key)
-    #   - order position within the list, starting from 0 (:order_column)
-    #
-    # By default these properties aren't writeable - when they are writeable:
-    #
-    # (for now at least) the rows of the join table are owned and managed soley
-    # by the parent objects via this mapper. The associated objects themselves,
-    # however, are free-floating and are not touched during
-    # create/update/delete (except optionally to store_new any new ones on
-    # create of the parent object, when :auto_store_new => true).
-    #
-    # If you supply a hash as :filter, this will be used to filter the join
-    # table, and will also be merged into any rows inserted into the join table.
-    # So if you use it on a writeable property, it needs to be map columns just
-    # to values rather than to other sql conditions.
-    #
-    # NB: for now this does not assume (or do anything special with respect to)
-    # the presence of a reciprocal many-to_many property on the target repo.
-    # This functionality will need adding later to help figure out the
-    # side-effects of changes to a many-to-many property when it comes to cache
-    # invalidation, and to ensure that the order given by the order_column is
-    # not upset by updates to the corresponding reciprocal property.
-    #
-    # So:
-    #   - Rows are inserted into the join table after the parent object is
-    #     created
-    #   - Rows in the join table are nuked and re-inserted after this property
-    #     on the parent object is updated
-    #   - Rows in the join table are deleted before the parent object is deleted
-    #     (unless :manual_cascade_delete
-    #     => false is specified hinting that ON CASCADE DELETE is set on the
-    #     foreign key so we needn't bother)
     class PropertyMapper
+      # Maps to an array of associated objects stored in another repo, where a
+      # :join_table exists with columns for:
+      #   - our id property (:left_key)
+      #   - other repo's id property (:right_key)
+      #   - order position within the list, starting from 0 (:order_column)
+      #
+      # By default these properties aren't writeable - when they are writeable:
+      #
+      # (for now at least) the rows of the join table are owned and managed
+      # soley by the parent objects via this mapper. The associated objects
+      # themselves, however, are free-floating and are not touched during
+      # create/update/delete (except optionally to store_new any new ones on
+      # create of the parent object, when :auto_store_new => true).
+      #
+      # If you supply a hash as :filter, this will be used to filter the join
+      # table, and will also be merged into any rows inserted into the join
+      # table. So if you use it on a writeable property, it needs to be map
+      # columns just to values rather than to other sql conditions.
+      #
+      # NB: for now this does not assume (or do anything special with respect
+      # to) the presence of a reciprocal many-to_many property on the target
+      # repo. This functionality will need adding later to help figure out the
+      # side-effects of changes to a many-to-many property when it comes to
+      # cache invalidation, and to ensure that the order given by the
+      # order_column is not upset by updates to the corresponding reciprocal
+      # property.
+      #
+      # So:
+      #   - Rows are inserted into the join table after the parent object is
+      #     created
+      #   - Rows in the join table are nuked and re-inserted after this
+      #     property on the parent object is updated
+      #   - Rows in the join table are deleted before the parent object is
+      #     deleted (unless :manual_cascade_delete
+      #     => false is specified hinting that ON CASCADE DELETE is set on the
+      #     foreign key so we needn't bother)
       class ManyToMany < PropertyMapper
         def self.setter_dependencies_for(model_class: nil)
           features = [Array(model_class)].map { |klass| [:get_class, klass] }

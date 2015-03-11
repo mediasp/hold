@@ -1,5 +1,6 @@
 module Hold
   module InMemory
+    # In memory Cell
     class Cell
       include Hold::Cell
 

@@ -1,5 +1,6 @@
 module Hold
   module InMemory
+    # in memory set repository
     class SetRepository
       include Hold::SetRepository
 

@@ -26,6 +26,7 @@ module Hold
   # MissingIdentity
   class MissingIdentity < StdError; end
 
+  # ForeignKeyConflict
   class ForeignKeyConflict < StdError
     def initialize(property, fk_property)
       @msg = 'OneToMany mapper: one of the values for mapped property '\
@@ -34,6 +35,7 @@ module Hold
     end
   end
 
+  # OrderPropertyConflict
   class OrderPropertyConflict < StdError
     def initialize(property, order_property)
       @msg = 'OneToMany mapper: one of the new values for mapped '\
@@ -43,18 +45,21 @@ module Hold
     end
   end
 
+  # NoRepoFound
   class NoRepoFound < StdError
     def initialize(type)
       @msg = "PolymorphicRepository: no repo found for type #{type}"
     end
   end
 
+  # ExpectedForeignKey
   class ExpectedForeignKey < StdError
     def initialize(property)
       @msg = "OneToManyMapper: Expected ForeignKey mapper with name #{property}"
     end
   end
 
+  # MismatchedTarget
   class MismatchedTarget < StdError
     def initialize(target_repo, model)
       @msg = "OneToManyMapper: ForeignKey mapper's target repo "\
@@ -63,6 +68,7 @@ module Hold
     end
   end
 
+  # AlreadyPersisted
   class AlreadyPersisted < StdError
     def initialize
       @msg = 'OneToMany mapper: already-persisted values are only '\
@@ -71,6 +77,7 @@ module Hold
     end
   end
 
+  # NoID
   class NoID < StdError
     def initialize(property)
       @msg = "value for ManyToMany mapped property #{property} has no "\

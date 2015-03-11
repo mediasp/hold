@@ -1,4 +1,5 @@
 module Hold
+  # Set Repository
   module SetRepository
     # like store, but should raise IdentityConflict if the object (or one equal
     # to it) already exists in the set

@@ -3,6 +3,7 @@ require 'json'
 
 module Hold
   module Serialized
+    # Json serializer
     class JSONSerializer
       def serialize(entity)
         entity.to_json

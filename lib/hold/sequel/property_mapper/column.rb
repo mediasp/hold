@@ -1,8 +1,8 @@
 module Hold
   module Sequel
-    # Simplest case: maps the property directly to a column on the corresponding
-    # table.
     class PropertyMapper
+      # Simplest case: maps the property directly to a column on the
+      # corresponding table.
       class Column < PropertyMapper
         attr_reader :column_name, :table, :column_alias, :column_qualified
 

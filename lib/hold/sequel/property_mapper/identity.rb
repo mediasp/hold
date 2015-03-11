@@ -1,6 +1,7 @@
 module Hold
   module Sequel
     class PropertyMapper
+      # ID column
       class Identity < PropertyMapper
         def columns_for_select(preferred_table = nil)
           [qualified_column_name(preferred_table)]

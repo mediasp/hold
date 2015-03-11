@@ -1,6 +1,7 @@
 module Hold
   module Sequel
     class PropertyMapper
+      # Column storing a timestamp everytime the model is updated.
       class UpdatedAt < PropertyMapper::Column
         def build_insert_row(_entity, table, row, _id = nil)
           row[@column_name] = Time.now if table == @table

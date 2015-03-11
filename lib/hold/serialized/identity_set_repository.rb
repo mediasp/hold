@@ -1,5 +1,6 @@
 module Hold
   module Serialized
+    # Serialized identity set repository
     class IdentitySetRepository
       include Hold::IdentitySetRepository
 

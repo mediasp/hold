@@ -1,9 +1,9 @@
 module Hold
   module Sequel
-    # A column mapper which allows you to supply a customized pair of
-    # transformations between the sequel values persisted in the db, and the
-    # values used for the outward-facing model property
     class PropertyMapper
+      # A column mapper which allows you to supply a customized pair of
+      # transformations between the sequel values persisted in the db, and the
+      # values used for the outward-facing model property
       class TransformedColumn < PropertyMapper::Column
         def initialize(repo, property_name, to_sequel: nil, from_sequel: nil)
           super(repo, property_name, {})

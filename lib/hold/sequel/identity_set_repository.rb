@@ -1,6 +1,7 @@
 require 'wirer'
 
 module Hold
+  # Sequel namespace
   module Sequel
     def self.IdentitySetRepository(model_class, main_table = nil)
       Class.new(IdentitySetRepository) do
@@ -12,6 +13,7 @@ module Hold
       end
     end
 
+    # Identity Set Repository
     class IdentitySetRepository
       include Hold::IdentitySetRepository
 

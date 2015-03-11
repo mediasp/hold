@@ -97,6 +97,7 @@ module Hold
       include ArrayCell
     end
 
+    # As above
     class ObjectPropertyCell < PropertyCell
       include ObjectCell
     end

@@ -21,6 +21,7 @@ module Hold
       true
     end
 
+    # Key cell
     class KeyCell
       include Cell
 
