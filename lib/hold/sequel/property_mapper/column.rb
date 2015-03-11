@@ -4,8 +4,7 @@ module Hold
     # table.
     class PropertyMapper
       class Column < PropertyMapper
-        attr_reader :column_name, :table, :column_alias, :column_qualified,
-                    :columns_aliases_and_tables_for_select
+        attr_reader :column_name, :table, :column_alias, :column_qualified
 
         def initialize(repo, property_name,
                        table: nil,
@@ -18,13 +17,19 @@ module Hold
           @column_alias = :"#{@table}_#{@column_name}"
           @column_qualified =
             ::Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
+        end
 
-          @columns_aliases_and_tables_for_select = [
-            [@column_qualified],
-            [::Sequel::SQL::AliasedExpression
-             .new(@column_qualified, @column_alias)],
-            [@table]
-          ]
+        def columns_for_select
+          [@column_qualified]
+        end
+
+        def aliases_for_select
+          [::Sequel::SQL::AliasedExpression
+            .new(@column_qualified, @column_alias)]
+        end
+
+        def tables_for_select
+          [@table]
         end
 
         def load_value(row, _id = nil, _version = nil)

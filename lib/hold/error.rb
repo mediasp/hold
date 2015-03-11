@@ -42,4 +42,39 @@ module Hold
         'equal to its index in the array'
     end
   end
+
+  class NoRepoFound < StdError
+    def initialize(type)
+      @msg = "PolymorphicRepository: no repo found for type #{type}"
+    end
+  end
+
+  class ExpectedForeignKey < StdError
+    def initialize(property)
+      @msg = "OneToManyMapper: Expected ForeignKey mapper with name #{property}"
+    end
+  end
+
+  class MismatchedTarget < StdError
+    def initialize(target_repo, model)
+      @msg = "OneToManyMapper: ForeignKey mapper's target repo "\
+      "#{target_repo.inspect} can't get our repository's "\
+      "model_class #{model}"
+    end
+  end
+
+  class AlreadyPersisted < StdError
+    def initialize
+      @msg = 'OneToMany mapper: already-persisted values are only '\
+        'allowed for property update where they were already a value '\
+        'of the property beforehand'
+    end
+  end
+
+  class NoID < StdError
+    def initialize(property)
+      @msg = "value for ManyToMany mapped property #{property} has no "\
+        'id, and :auto_store_new not specified'
+    end
+  end
 end

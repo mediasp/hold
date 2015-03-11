@@ -39,96 +39,96 @@ module Hold
                     :order_direction, :foreign_key_property_name,
                     :denormalized_count_column, :model_class
 
-        def initialize(repo, property_name, property:, model_class:,
-                       order_property: nil,
-                       order_direction: :asc,
-                       writeable: false,
-                       manual_cascade_delete: true,
-                       denormalized_count_column: nil)
-          super(repo, property_name)
+        def initialize(repo, property_name, options = {})
+          super
 
-          @foreign_key_property_name = property
-          @order_property = order_property
-          @order_direction = order_direction
+          @foreign_key_property_name = options[:property]
+          @model_class = options[:model_class]
+          @writeable = options[:writeable] || false
+          @order_property = options[:order_property]
+          @order_direction = options[:order_direction] || :asc
 
-          @extra_properties = { @foreign_key_property_name => true }
-          @extra_properties[@order_property] = true if @order_property
+          @manual_cascade_delete =
+            (v = options[:manual_cascade_delete].nil?) ? true : v
 
-          @writeable = writeable
-          @manual_cascade_delete = manual_cascade_delete
+          @denormalized_count_column = options[:denormalized_count_column]
+        end
 
-          @denormalized_count_column = denormalized_count_column
-
-          @model_class = model_class
+        def extra_properties
+          @extra_properties ||=
+            begin
+              extra_properties = { @foreign_key_property_name => true }
+              extra_properties[@order_property] = true if @order_property
+              extra_properties
+            end
         end
 
         def foreign_key_mapper
           @foreign_key_mapper ||=
-            begin
-              mapper = target_repo.mapper(@foreign_key_property_name)
+            target_repo.mapper(@foreign_key_property_name).tap do |mapper|
               unless mapper.is_a?(PropertyMapper::ForeignKey)
-                fail 'OneToManyMapper: Expected ForeignKey mapper with name ' \
-                  "#{@foreign_key_property_name}"
+                fail ExpectedForeignKey @foreign_key_property_name
               end
               unless mapper.target_repo.can_get_class?(@repository.model_class)
-                fail "OneToManyMapper: ForeignKey mapper's target repo "\
-                  "#{mapper.target_repo.inspect} can't get our repository's"\
-                  " model_class #{@repository.model_class}"
+                fail MismatchedTarget target_repo, @repository.model_class
               end
-              mapper
             end
         end
 
         def load_value(_row, id, properties = nil)
-          properties = (properties || target_repo.default_properties)
-                       .merge(@extra_properties)
+          properties = properties_to_load(properties)
+
           target_repo.query(properties) do |dataset, mapping|
-            filter = foreign_key_mapper
-                     .make_filter_by_id(id, mapping[@foreign_key_property_name])
+            filter = id_filter(id, mapping)
 
-            dataset = dataset.filter(filter)
-            if @order_property
-              dataset = dataset
-                        .order(Sequel.send(@order_direction, @order_property))
+            dataset.filter(filter).tap do |ds|
+              if @order_property
+                ds.order(Sequel.send(@order_direction, @order_property))
+              end
             end
-
-            dataset
           end.to_a
         end
 
-        def load_values(_rows, ids = nil, properties = nil)
-          properties = (properties || target_repo.default_properties)
-                       .merge(@extra_properties)
+        def load_values(_rows, ids, properties = nil)
+          properties = properties_to_load(properties)
 
-          query = target_repo.query(properties) do |dataset, mapping|
-            filter = foreign_key_mapper
-                     .make_filter_by_ids(ids,
-                                         mapping[@foreign_key_property_name])
-            dataset = dataset
-                      .filter(filter)
-                      .select(foreign_key_mapper
-                              .column_qualified.as(:_one_to_many_id))
+          query = load_values_query(ids, properties)
 
-            if @order_property
-              dataset = dataset.order(:_one_to_many_id,
-                                      target_repo.mapper(@order_property)
-              .column_qualified.send(@order_direction))
-            end
-
-            dataset
-          end
-
-          groups = []
-          id_to_group = {}
-
-          ids.each_with_index do |id, index|
-            id_to_group[id] = groups[index] = []
-          end
+          groups = ids.map { [] }
+          id_to_group = Hash.new([])
 
           query.results_with_rows.each do |entity, row|
             id_to_group[row[:_one_to_many_id]] << entity
           end
+
           groups.each_with_index { |id, index| yield id, index }
+        end
+
+        def load_values_query(ids, properties)
+          target_repo.query(properties) do |dataset, mapping|
+            dataset.filter(ids_filter(ids, mapping))
+              .select(foreign_key_mapper .column_qualified.as(:_one_to_many_id))
+              .tap do |ds|
+                if @order_property
+                  ds.order(:_one_to_many_id, target_repo.mapper(@order_property)
+                           .column_qualified.send(@order_direction))
+                end
+              end
+          end
+        end
+
+        def id_filter(id, mapping)
+          foreign_key_mapper
+            .make_filter_by_id(id, mapping[@foreign_key_property_name])
+        end
+
+        def ids_filter(ids, mapping)
+          foreign_key_mapper
+            .make_filter_by_ids(ids, mapping[@foreign_key_property_name])
+        end
+
+        def properties_to_load(properties = nil)
+          (properties || target_repo.default_properties).merge(extra_properties)
         end
 
         # adds a join to the target_repo's table, onto a dataset from the
@@ -250,11 +250,7 @@ module Hold
             .each { |value| target_repo.delete(value) }
           # insert any new ones / update any existing ones which remain:
           update_values.each_with_index do |value, index|
-            if value.id && !values_before.include?(value)
-              fail 'OneToMany mapper: already-persisted values are only '\
-                'allowed for property update where they were already a value '\
-                'of the property beforehand'
-            end
+            fail AlreadyPersisted if value.id && !values_before.include?(value)
 
             set_foreign_key_and_order_properties_on_value(entity, value, index)
             # this will insert any new values, or update any existing ones.

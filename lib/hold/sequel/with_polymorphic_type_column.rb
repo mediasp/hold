@@ -73,20 +73,26 @@ module Hold
           alias_method :set_model_class, :model_class=
         end
 
-        def initialize(db)
-          super
-          @qualified_type_column =
+        def qualified_type_column
+          @qualified_type_column ||=
             ::Sequel::SQL::QualifiedIdentifier.new(self.class.type_column_table,
                                                    self.class.type_column)
+        end
 
-          @aliased_type_column =
-            ::Sequel::SQL::AliasedExpression.new(@qualified_type_column, :type)
+        def aliased_type_column
+          @aliased_type_column ||=
+            ::Sequel::SQL::AliasedExpression.new(qualified_type_column, :type)
+        end
 
-          @restricted_to_types = self.class.restricted_to_types
-          @tables_restricting_type = {}
-          self.class.tables.each do |name, options|
-            @tables_restricting_type[name] = true if options[:restricts_type]
-          end
+        def restricted_to_types
+          self.class.restricted_to_types
+        end
+
+        def tables_restricting_type
+          @tables_restricting_type ||=
+            self.class.tables.each_with_object({}) do |(name, options), hash|
+              hash[name] = true if options[:restricts_type]
+            end
         end
 
         def can_get_class?(model_class)
@@ -110,7 +116,7 @@ module Hold
         # since even if we know the ID, we have to query the db to find out the
         # appropriate class to construct the object as.
         def can_construct_from_id_alone?(properties)
-          super && @restricted_to_types && @restricted_to_types.length == 1
+          super && restricted_to_types && restricted_to_types.length == 1
         end
 
         # ensure we select the type column in addition to any columns for mapped
@@ -118,15 +124,23 @@ module Hold
         #
         # If we're restricted to only one class, we don't need to select the
         # type column
-        def columns_aliases_and_tables_for_properties(properties)
-          columns_by_property, aliased_columns, tables = super
-          unless @restricted_to_types && @restricted_to_types.length == 1
-            aliased_columns << @aliased_type_column
+
+        def aliases_by_property(properties)
+          aliased_columns = super
+          unless restricted_to_types && restricted_to_types.length == 1
+            aliased_columns << aliased_type_column
+          end
+          aliased_columns
+        end
+
+        def tables_by_property(properties)
+          tables = super
+          unless restricted_to_types && restricted_to_types.length == 1
             unless tables.include?(self.class.type_column_table)
               tables << self.class.type_column_table
             end
           end
-          [columns_by_property, aliased_columns, tables]
+          tables
         end
 
         # Where 'restricted_to_types' has been set, ensure we add a filter to
@@ -139,9 +153,9 @@ module Hold
         # restricted_to_types restriction. hence no additional where clause is
         # needed in order to do this. Helps with Class Table Inheritance.
         def dataset_to_select_tables(*tables)
-          if @restricted_to_types &&
-             !@tables_restricting_type.values_at(*tables).any?
-            super.filter(@qualified_type_column => @restricted_to_types)
+          if restricted_to_types &&
+             !tables_restricting_type.values_at(*tables).any?
+            super.filter(qualified_type_column => restricted_to_types)
           else
             super
           end

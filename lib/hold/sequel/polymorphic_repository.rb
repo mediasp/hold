@@ -60,18 +60,17 @@ module Hold
       # - Combines the results from the separate queries putting them into the
       #   order of the IDs from the original rows (or in the order of the ids
       #   given, where they are given)
-      def load_from_rows(rows, options = {}, ids = nil)
-        ids ||= rows.map { |row| row[:_id] }
-        ids_by_type = Hash.new { |h, k| h[k] = [] }
-        rows.each { |row| ids_by_type[row[:_type]] << row[:_id] }
-        results_by_id = {}
-        ids_by_type.each do |type, type_ids|
-          repo = type_to_repo_mapping[type] ||
-                 (fail "PolymorphicRepository: no repo found for type #{type}")
-          repo.get_many_by_ids(type_ids, options)
-            .each_with_index { |res, i| results_by_id[type_ids[i]] = res }
+      def load_from_rows(rows, options = {}, ids = rows.map { |row| row[:_id] })
+        ids_by_type = rows.each_with_object(Hash.new([])) do |row, hash|
+          hash[row[:_type]] << row[:_id]
         end
-        results_by_id.values_at(*ids)
+
+        ids_by_type.each_with_object({}) do |(type, type_ids), hash|
+          repo = type_to_repo_mapping[type] || (fail NoRepoFound type)
+          repo.get_many_by_ids(type_ids, options)
+            .each_with_index { |res, i| hash[type_ids[i]] = res }
+        end
+          .values_at(*ids)
       end
 
       def load_from_row(row, options = {})

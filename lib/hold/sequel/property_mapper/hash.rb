@@ -20,18 +20,11 @@ module Hold
           @value_column = value_column
 
           @dataset    = @repository.db[@table]
-          @select_kv  = @repository.db[@table].select(
-            Sequel.as(@key_column, :key),
-            Sequel.as(@value_column, :value))
-          @select_all = @repository.db[@table].select(
-            Sequel.as(@key_column, :key),
-            Sequel.as(@value_column, :value),
-            Sequel.as(@foreign_key, :id))
         end
 
         def load_value(_row = nil, id = nil, _properties = nil)
           result = {}
-          @select_kv.filter(@foreign_key => id).each do |row|
+          select_kv.filter(@foreign_key => id).each do |row|
             result[row[:key]] = row[:value]
           end
           result
@@ -39,7 +32,7 @@ module Hold
 
         def load_values(_rows = nil, ids = nil, _properties = nil, &block)
           results = Hash.new { |h, k| h[k] = {} }
-          @select_all.filter(@foreign_key => ids).each do |row|
+          select_all.filter(@foreign_key => ids).each do |row|
             results[row[:id]][row[:key]] = row[:value]
           end
           result.values_at(*ids).each_with_index(&block)
@@ -64,6 +57,21 @@ module Hold
           @dataset.multi_insert(hash.map do |k, v|
             { @foreign_key => entity.id, @key_column => k, @value_column => v }
           end)
+        end
+
+        private
+
+        def select_kv
+          @select_kv  ||= @repository.db[@table].select(
+            Sequel.as(@key_column, :key),
+            Sequel.as(@value_column, :value))
+        end
+
+        def select_all
+          @select_all ||= @repository.db[@table].select(
+            Sequel.as(@key_column, :key),
+            Sequel.as(@value_column, :value),
+            Sequel.as(@foreign_key, :id))
         end
       end
     end

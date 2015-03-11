@@ -52,13 +52,16 @@ module Hold
           [[:get_class, model_class]]
         end
 
-        def setter_dependencies
-          dependencies = { observers: Wirer::Dependency.new(
+        def dependencies
+          @dependencies ||= { observers: Wirer::Dependency.new(
             module: Hold::Sequel::RepositoryObserver,
             features: [[:observes_repo_for_class, model_class]],
             multiple: true,
             optional: true
           ) }
+        end
+
+        def setter_dependencies
           property_mapper_args
             .each do |property_name, mapper_class, options, block|
               mapper_class.setter_dependencies_for(options, &block)
@@ -114,47 +117,81 @@ end
         self.class.model_class
       end
 
-      attr_reader :db, :main_table, :property_mappers, :identity_property,
-                  :identity_mapper, :id_sequence_table, :default_properties
+      attr_reader :db
 
       def initialize(db)
         fail 'abstract superclass' if instance_of?(IdentitySetRepository)
         @db = db
+      end
 
-        @tables = []
-        @tables_id_columns = {}
-        self.class.tables.each do |name, options|
-          @tables << name
-          @tables_id_columns[name] = options[:id_column]
-          @id_sequence_table = name if options[:id_sequence]
-          @main_table = name if options[:default]
-        end
-        @main_table ||= @tables.first
+      def tables
+        @tables ||=
+          self.class.tables.each_with_object([]) do |(name, _), arr|
+            arr << name
+          end
+      end
 
-        @property_mappers = {}
-        @default_properties = {}
+      def tables_id_columns
+        @tables_id_columns ||=
+          self.class.tables
+          .each_with_object({}) do |(name, options), hash|
+            hash[name] = options[:id_column]
+          end
+      end
 
-        # map the identity_property
-        @identity_property = :id # TODO: make this configurable
-        @identity_mapper = @property_mappers[@identity_property] =
-          PropertyMapper::Identity.new(self, @identity_property)
+      def id_sequence_table
+        @id_sequence_table ||=
+          begin
+            name, _ = self.class.tables
+                      .find { |(_, options)| options[:id_sequence] }
+            name
+          end
+      end
 
-        self.class.property_mapper_args
-          .each do |property_name, mapper_class, options, block|
-            @property_mappers[property_name] =
-              mapper_class.new(self, property_name, options, &block)
+      attr_writer :id_sequence_table
 
+      def main_table
+        @main_table ||=
+          begin
+            name, _ = self.class.tables
+                      .find { |(_, options)| options[:default] }
+            name || tables.first
+          end
+      end
+
+      def identity_property
+        @identity_property ||= :id
+      end
+
+      def identity_mapper
+        @identity_mapper ||=
+          PropertyMapper::Identity.new(self, identity_property)
+      end
+
+      def property_mappers
+        @property_mappers ||=
+          begin
+            mappers = { identity_property => identity_mapper }
+            self.class.property_mapper_args
+            .each_with_object(mappers) do |(prop, mapper, opts, block), hash|
+              hash[prop] = mapper.new(self, prop, opts, &block)
+            end.freeze
+          end
+      end
+
+      def default_properties
+        @default_properties ||=
+          self.class.property_mapper_args
+          .each_with_object({}) do |(property_name, mapper_class), hash|
             case
             when mapper_class <= PropertyMapper::Column
-              @default_properties[property_name] = true
+              hash[property_name] = true
             when mapper_class <= PropertyMapper::ForeignKey
               # for foreign key properties, by default we only load the ID
               # (which is already present on the parent result row):
-              @default_properties[property_name] = JUST_ID
+              hash[property_name] = JUST_ID
             end
           end
-
-        @property_mappers.freeze
       end
 
       JUST_ID = [:id].freeze
@@ -164,7 +201,7 @@ end
       end
 
       def allocates_ids?
-        !@id_sequence_table.nil?
+        !id_sequence_table.nil?
       end
 
       # is this repository capable of loading instances of the given model
@@ -199,7 +236,7 @@ end
       # convenience to get a particular property mapper of this repo:
       def mapper(name)
         fail ArgumentError unless name.is_a?(Symbol)
-        @property_mappers[name] ||
+        property_mappers[name] ||
           (fail "#{self.class}: no such property mapper #{name.inspect}")
       end
 
@@ -207,13 +244,13 @@ end
       # for each property mapped by a foreign key mapper etc - this will have
       # the mappers go find the dependency themselves.
       def get_repo_dependencies_from(repo_set)
-        @property_mappers.each_value do |mapper|
+        property_mappers.each_value do |mapper|
           mapper.get_repo_dependencies_from(repo_set)
         end
       end
 
       def table_id_column(table)
-        @tables_id_columns[table]
+        tables_id_columns[table]
       end
 
       private
@@ -223,7 +260,7 @@ end
 
       def map_property(property_name, mapper_class = PropertyMapper, *p, &b)
         fail unless mapper_class <= PropertyMapper
-        @property_mappers[property_name] =
+        property_mappers[property_name] =
           mapper_class.new(self, property_name, *p, &b)
       end
 
@@ -243,9 +280,9 @@ end
       end
 
       def use_table(name, options = {})
-        @tables << name
-        @tables_id_columns[name] = options[:id_column] || :id
-        @id_sequence_table = name if options[:id_sequence]
+        tables << name
+        tables_id_columns[name] = options[:id_column] || :id
+        self.id_sequence_table = name if options[:id_sequence]
       end
 
       # Some helpers
@@ -256,7 +293,7 @@ end
 
       def insert_row_for_entity(entity, table, id = nil)
         row = {}
-        @property_mappers.each_value do |mapper|
+        property_mappers.each_value do |mapper|
           mapper.build_insert_row(entity, table, row, id)
         end
         row
@@ -264,7 +301,7 @@ end
 
       def update_row_for_entity(update_entity, table)
         row = {}
-        @property_mappers.each_value do |mapper|
+        property_mappers.each_value do |mapper|
           mapper.build_update_row(update_entity, table, row)
         end
         row
@@ -290,7 +327,7 @@ end
       end
 
       def construct_entity_from_id(id)
-        model_class.new(@identity_property => id) do |model, property|
+        model_class.new(identity_property => id) do |model, property|
           get_property(model, property)
         end
       end
@@ -304,41 +341,57 @@ end
 
       def dataset_to_select_tables(*tables)
         main_table, *other_tables = tables
-        main_id = @identity_mapper.qualified_column_name(main_table)
+        main_id = identity_mapper.qualified_column_name(main_table)
         other_tables.inject(@db[main_table]) do |dataset, table|
           dataset.join(table,
-                       @identity_mapper.qualified_column_name(table) => main_id)
+                       identity_mapper.qualified_column_name(table) => main_id)
         end
       end
 
       def columns_aliases_and_tables_for_properties(properties)
-        columns_by_property = {}
-        aliased_columns = []
-        tables = []
-        properties.each do |p|
-          next if p == @identity_property # this gets special handling
-          cs, as, ts = mapper(p).columns_aliases_and_tables_for_select
-          columns_by_property[p] = cs
-          aliased_columns.concat(as)
-          tables.concat(ts)
-        end
-        tables.unshift(@main_table) if tables.delete(@main_table)
+        [columns_by_property(properties),
+         aliases_by_property(properties),
+         tables_by_property(properties)]
+      end
 
-        # the identity mapper gets called last, so that it can get a hint about
-        # what tables are already required for the other columns. (seeing as how
-        # an identity column needs to be present on every table used for a given
-        # repo, it should never need to add an extra table just in order to
-        # select the ID)
-        id_cols, id_aliases, id_tables =
-          @identity_mapper
-          .columns_aliases_and_tables_for_select(tables.first || @main_table)
+      def columns_by_property(properties)
+        id_cols = identity_mapper.columns_for_select(main_table)
+        columns_by_property = { identity_property => id_cols }
 
-        columns_by_property[@identity_property] = id_cols
-        aliased_columns.concat(id_aliases)
+        properties
+          .reject { |p| p == identity_property }
+          .each_with_object(columns_by_property) do |p, hash|
+            hash[p] = mapper(p).columns_for_select
+          end
+      end
+
+      def aliases_by_property(properties)
+        id_aliases =
+          identity_mapper
+          .aliases_for_select(main_table)
+
+        properties
+          .reject { |p| p == identity_property }
+          .each_with_object(id_aliases) do |p, arr|
+            arr.concat mapper(p).aliases_for_select
+          end
+          .uniq
+      end
+
+      def tables_by_property(properties)
+        tables = properties
+                 .reject { |p| p == identity_property }
+                 .each_with_object([]) do |p, arr|
+                   ts = mapper(p).tables_for_select
+                   arr.concat(ts)
+                 end
+
+        tables.unshift(main_table) if tables.delete(main_table)
+
+        id_tables = identity_mapper.tables_for_select(tables.first)
+
         tables.concat(id_tables)
-        aliased_columns.uniq!
-        tables.uniq!
-        [columns_by_property, aliased_columns, tables]
+        tables.uniq
       end
 
       def transaction(*p, &b)
@@ -349,9 +402,7 @@ end
       # queries.
 
       def query(properties = nil, &b)
-        if properties == true || properties.nil?
-          properties = @default_properties
-        end
+        properties = default_properties if properties == true || properties.nil?
         Query.new(self, properties, &b)
       end
 
@@ -372,61 +423,43 @@ end
       end
 
       def get_property(entity, property, options = {})
-        unless property.is_a? Symbol
-          fail ArgumentError, 'get_property must suppy a symbol'
-        end
-        begin
-          result =
-            query(property =>
-                  options[:properties]) do |dataset, property_columns|
-                    filter = @identity_mapper
-                             .make_filter(entity.id,
-                                          property_columns[@identity_property])
-                    dataset.filter(filter)
-                  end.single_result
-        rescue TypeError
-          # catches test errors caught by []ing a string post 1.8
-          raise ArgumentError, 'get_property caught a type error, check options'
-        end
+        result = query(property => options[:properties]) do |ds, cols|
+          filter = identity_mapper
+                   .make_filter(entity.id, cols[identity_property])
+          ds.filter(filter)
+        end.single_result
         result && result[property]
       end
 
-      def get_by_id(id, options = {})
-        properties = options[:properties]
-
+      def get_by_id(id, properties: nil)
         if can_construct_from_id_alone?(properties)
           return construct_entity_from_id(id)
         end
 
         query(properties) do |dataset, property_columns|
-          filter = @identity_mapper
-                   .make_filter(id, property_columns[@identity_property])
+          filter = identity_mapper
+                   .make_filter(id, property_columns[identity_property])
           dataset.filter(filter)
         end.single_result
       end
 
       # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
-      def get_many_by_ids(ids, options = {})
-        properties = options[:properties]
-
+      def get_many_by_ids(ids, properties: nil, lazy: false)
         if can_construct_from_id_alone?(properties)
           return ids.map { |id| construct_entity_from_id(id) }
         end
 
-        results = query(options[:properties]) do |ds, mapping|
-          id_filter = @identity_mapper
-                      .make_multi_filter(ids.uniq, mapping[@identity_property])
+        results = query(properties) do |ds, mapping|
+          id_filter = identity_mapper
+                      .make_multi_filter(ids.uniq, mapping[identity_property])
           ds.filter(id_filter)
-        end.to_a(options[:lazy])
+        end.to_a(lazy)
 
-        results_by_id = results.each_with_object({}) do |object, hash|
-          hash[object.id] = object
-        end
-        ids.map { |id| results_by_id[id] }
+        ids.map { |id| results.find { |object| object.id == id } }
       end
 
       def get_many_by_property(property, value, options = {})
-        properties_to_fetch ||= @default_properties.dup
+        properties_to_fetch ||= default_properties.dup
         properties_to_fetch[property] = true
         query(options[:properties]) do |dataset, property_columns|
           filter = mapper(property)
@@ -441,9 +474,9 @@ end
       end
 
       def contains_id?(id)
-        dataset = dataset_to_select_tables(@main_table)
-        id_filter = @identity_mapper
-                    .make_filter(id, [@tables_id_columns[@main_table]])
+        dataset = dataset_to_select_tables(main_table)
+        id_filter = identity_mapper
+                    .make_filter(id, [tables_id_columns[main_table]])
         dataset.filter(id_filter).select(1).limit(1).single_value ? true : false
       end
 
@@ -461,20 +494,11 @@ end
       # If the entity has an ID, it will check whether it's currently contained
       # in the repository before calling store_new or update as appropriate.
       def store(entity)
-        id = entity.id
-        if id
-          transaction do
-            if contains_id?(id)
-              update(entity)
-            else
-              store_new(entity)
-            end
-          end
-        else
-          if allocates_ids?
-            store_new(entity)
+        transaction do
+          if (id = entity.id)
+            contains_id?(id) ? update(entity) : store_new(entity)
           else
-            fail Hold::MissingIdentity
+            allocates_ids? ? store_new(entity) : (fail Hold::MissingIdentity)
           end
         end
         entity
@@ -490,35 +514,32 @@ end
       # you'll need to order your use_table declarations accordingly.
       def store_new(entity)
         transaction do
-          rows = {}
-          insert_id = nil
           pre_insert(entity)
-          @property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
-          if @id_sequence_table
-            row = insert_row_for_entity(entity, @id_sequence_table)
-            insert_id = translate_exceptions do
-              @db[@id_sequence_table].insert(row)
-            end
-            rows[@id_sequence_table] = row
-          end
-          # note: order is important here if you have foreign key dependencies,
-          # order your use_table declarations appropriately:
-          @tables.each do |table|
-            next if table == @id_sequence_table # done that already
-            row = insert_row_for_entity(entity, table, insert_id)
-            translate_exceptions { @db[table].insert(row) }
-            rows[table] = row
-          end
-          # identity_mapper should be called first, so that other mappers have
-          # the new ID available on the entity when called.
-          @identity_mapper.post_insert(entity, rows, insert_id)
-          @property_mappers.each_value do |mapper|
-            next if mapper == @identity_mapper
-            mapper.post_insert(entity, rows, insert_id)
-          end
+          insert_id, rows = insert(entity)
           post_insert(entity, rows, insert_id)
           entity
         end
+      end
+
+      def insert(entity)
+        insert_id = nil
+
+        # note: order is important here if you have foreign key dependencies,
+        # order your use_table declarations appropriately:
+        rows = tables.dup.unshift(id_sequence_table).uniq.compact
+               .each_with_object({}) do |table, hash|
+                 id, row = table_store_new(entity, table, insert_id)
+                 insert_id = id if table == id_sequence_table
+                 hash[table] = row
+               end
+
+        [insert_id, rows]
+      end
+
+      def table_store_new(entity, table, insert_id = nil)
+        row = insert_row_for_entity(entity, table, insert_id)
+        id = translate_exceptions { @db[table].insert(row) }
+        [id, row]
       end
 
       # Remember to call super if you override this.
@@ -526,12 +547,20 @@ end
       # beforehand
       def pre_insert(entity)
         Array(@observers).each { |observer| observer.pre_insert(self, entity) }
+        property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
       end
 
       # Remember to call super if you override this.
       # If you do any extra inserting in an overridden post_insert, call super
       # afterwards
       def post_insert(entity, rows, insert_id)
+        # identity_mapper should be called first, so that other mappers have
+        # the new ID available on the entity when called.
+        identity_mapper.post_insert(entity, rows, insert_id)
+        property_mappers.each_value do |mapper|
+          next if mapper == identity_mapper
+          mapper.post_insert(entity, rows, insert_id)
+        end
         Array(@observers).each do |observer|
           observer.post_insert(self, entity, rows, insert_id)
         end
@@ -540,29 +569,27 @@ end
       def update(entity, update_entity = entity)
         id = entity.id || (fail Hold::MissingIdentity)
         transaction do
-          pre_update(entity, update_entity)
+          data_from_mappers = pre_update(entity, update_entity)
 
-          data_from_mappers = @property_mappers
-                              .each_with_object({}) do |(name, mapper), hash|
-            hash[name] = mapper.pre_update(entity, update_entity)
+          rows = tables.each_with_object({}) do |table, hash|
+            hash[table] = update_row_for_entity(update_entity, table)
           end
 
-          rows = @tables.each_with_object({}) do |table, hash|
-            hash[table] = row = update_row_for_entity(update_entity, table)
-            next if row.empty?
-            id_filter = @identity_mapper
-                        .make_filter(id, [@tables_id_columns[table]])
+          update_rows(id, rows)
 
+          post_update(entity, update_entity, rows, data_from_mappers)
+
+          entity.respond_to?(:merge) ? entity.merge!(update_entity) : entity
+        end
+      end
+
+      def update_rows(id, rows)
+        rows.reject { |_, row| row.empty? }
+          .each do |table, row|
+            id_filter = identity_mapper
+                        .make_filter(id, [tables_id_columns[table]])
             translate_exceptions { @db[table].filter(id_filter).update(row) }
           end
-          @property_mappers.each do |name, mapper|
-            mapper
-              .post_update(entity, update_entity, rows, data_from_mappers[name])
-          end
-          post_update(entity, update_entity, rows)
-          entity.merge!(update_entity) if entity.respond_to?(:merge!)
-          entity
-        end
       end
 
       # Remember to call super if you override this.
@@ -572,19 +599,26 @@ end
         Array(@observers).each do |observer|
           observer.pre_update(self, entity, update_entity)
         end
+        property_mappers.each_with_object({}) do |(name, mapper), hash|
+          hash[name] = mapper.pre_update(entity, update_entity)
+        end
       end
 
       # Remember to call super if you override this.
       # If you do any extra updating in an overridden post_update, call super
       # afterwards
-      def post_update(entity, update_entity, rows)
+      def post_update(entity, update_entity, rows, data_from_mappers)
+        property_mappers.each do |name, mapper|
+          mapper
+            .post_update(entity, update_entity, rows, data_from_mappers[name])
+        end
         Array(@observers).each do |observer|
           observer.post_update(self, entity, update_entity, rows)
         end
       end
 
       def update_by_id(id, update_entity)
-        entity = construct_entity(@identity_property => id)
+        entity = construct_entity(identity_property => id)
         update(entity, update_entity)
       end
 
@@ -599,16 +633,10 @@ end
         id = entity.id || (fail Hold::MissingIdentity)
         transaction do
           pre_delete(entity)
-          @property_mappers.each do |_name, mapper|
-            mapper.pre_delete(entity)
-          end
-          @tables.reverse_each do |table|
-            id_filter = @identity_mapper
-                        .make_filter(id, [@tables_id_columns[table]])
+          tables.reverse_each do |table|
+            id_filter = identity_mapper
+                        .make_filter(id, [tables_id_columns[table]])
             @db[table].filter(id_filter).delete
-          end
-          @property_mappers.each do |_name, mapper|
-            mapper.post_delete(entity)
           end
           post_delete(entity)
         end
@@ -619,17 +647,19 @@ end
       # beforehand
       def pre_delete(entity)
         Array(@observers).each { |observer| observer.pre_delete(self, entity) }
+        property_mappers.each { |_, mapper| mapper.pre_delete(entity) }
       end
 
       # Remember to call super if you override this.
       # If you do any extra deleting in an overridden post_delete, call super
       # afterwards
       def post_delete(entity)
+        property_mappers.each { |_, mapper| mapper.post_delete(entity) }
         Array(@observers).each { |observer| observer.post_delete(self, entity) }
       end
 
       def delete_id(id)
-        entity = construct_entity(@identity_property => id)
+        entity = construct_entity(identity_property => id)
         delete(entity)
       end
 
@@ -640,7 +670,7 @@ end
       end
 
       def count_dataset
-        dataset = dataset_to_select_tables(@main_table)
+        dataset = dataset_to_select_tables(main_table)
         dataset = yield dataset if block_given?
         dataset.count
       end

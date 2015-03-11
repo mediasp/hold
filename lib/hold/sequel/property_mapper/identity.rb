@@ -2,13 +2,20 @@ module Hold
   module Sequel
     class PropertyMapper
       class Identity < PropertyMapper
-        def columns_aliases_and_tables_for_select(preferred_table = nil)
-          preferred_table ||= @repository.main_table
-          qualified = qualified_column_name(preferred_table)
-          [[qualified], [qualified.as(:id)], [preferred_table]]
+        def columns_for_select(preferred_table = nil)
+          [qualified_column_name(preferred_table)]
         end
 
-        def qualified_column_name(preferred_table = @repository.main_table)
+        def aliases_for_select(preferred_table = nil)
+          [qualified_column_name(preferred_table).as(:id)]
+        end
+
+        def tables_for_select(preferred_table = nil)
+          [preferred_table || @repository.main_table]
+        end
+
+        def qualified_column_name(preferred_table)
+          preferred_table ||= @repository.main_table
           id_column = @repository.table_id_column(preferred_table)
           ::Sequel::SQL::QualifiedIdentifier.new(preferred_table, id_column)
         end

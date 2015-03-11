@@ -11,9 +11,8 @@ module Hold
 
         attr_accessor :target_repo
 
-        attr_reader :columns_aliases_and_tables_for_select, :column_alias,
-                    :column_name, :table, :column_qualified, :auto_store_new,
-                    :model_class
+        attr_reader :column_alias, :column_name, :table, :column_qualified,
+                    :auto_store_new, :model_class
 
         # auto_store_new: where the value for this property is an object without
         # an ID, automatically store_new the object in the target_repo before
@@ -30,15 +29,22 @@ module Hold
           @column_alias = :"#{@table}_#{@column_name}"
           @column_qualified =
             ::Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
-          @columns_aliases_and_tables_for_select = [
-            [@column_qualified],
-            [::Sequel::SQL::AliasedExpression
-             .new(@column_qualified, @column_alias)],
-            [@table]
-          ]
 
           @auto_store_new = auto_store_new
           @model_class = model_class
+        end
+
+        def columns_for_select
+          [@column_qualified]
+        end
+
+        def aliases_for_select
+          [::Sequel::SQL::AliasedExpression
+            .new(@column_qualified, @column_alias)]
+        end
+
+        def tables_for_select
+          [@table]
         end
 
         def load_value(row, _id = nil, properties = nil)
@@ -94,8 +100,7 @@ module Hold
           fkeys = rows.map { |row| row[@column_alias] }
           non_nil_fkeys = fkeys.compact
           non_nil_fkey_results =
-            if non_nil_fkeys.empty?
-              []
+            if non_nil_fkeys.empty? then []
             else
               target_repo.get_many_by_ids(non_nil_fkeys, properties: properties)
             end

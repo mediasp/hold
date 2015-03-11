@@ -15,10 +15,10 @@ module Hold
       # If you pass a block, it will be instance_evalled, allowing you to create
       # one-off custom property mappers by overriding bits of this
       # implementation in the block.
-      def initialize(repo, property_name, _options = nil, &block)
+      def initialize(repo, property_name, _options = nil)
         @repository = repo
         @property_name = property_name
-        instance_eval(&block) if block
+        yield self if block_given?
       end
 
       # columns: column names to include in a SELECT in order to select this
@@ -37,7 +37,19 @@ module Hold
       # prefer you load the column off a particular table; at present this is
       # only used by the IdentityMapper
       def columns_aliases_and_tables_for_select(_preferred_table = nil)
-        [[], [], []]
+        [columns_for_select, aliases_for_select, tables_for_select]
+      end
+
+      def columns_for_select(_preferred_table = nil)
+        []
+      end
+
+      def aliases_for_select(_preferred_table = nil)
+        []
+      end
+
+      def tables_for_select(_preferred_table = nil)
+        []
       end
 
       # Obtains the value of this property from a sequel result row and/or
