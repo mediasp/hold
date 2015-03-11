@@ -6,17 +6,16 @@ module Hold
       class Array < PropertyMapper
         attr_reader :table, :foreign_key, :value_column
 
-        def initialize(repo, property_name,
-                       table: :"#{repo.main_table}_#{property_name}",
-                       foreign_key: :"#{repo.main_table.to_s.singularize}_id",
-                       value_column: :value, order_column: nil)
+        def initialize(repo, property_name, options = {})
           super(repo, property_name)
 
-          @table = table
-          @foreign_key = foreign_key
+          @table = options.fetch(:table, :"#{repo.main_table}_#{property_name}")
+          @foreign_key =
+            options.fetch(:foreign_key,
+                          :"#{repo.main_table.to_s.singularize}_id")
 
-          @value_column = value_column
-          @order_column = order_column
+          @value_column = options.fetch(:value_column, :value)
+          @order_column = options[:order_column]
 
           @dataset = @repository.db[@table]
         end

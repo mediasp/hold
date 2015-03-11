@@ -6,20 +6,16 @@ module Hold
       class Hash < PropertyMapper
         attr_reader :table, :foreign_key, :key_column, :value_column
 
-        def initialize(repo, property_name,
-                       table: :"#{repo.main_table}_#{property_name}",
-                       foreign_key: :"#{repo.main_table.to_s.singularize}_id",
-                       key_column: :key,
-                       value_column: :value)
-
+        def initialize(repo, property_name, options = {})
           super(repo, property_name)
 
-          @table = table
-          @foreign_key  = foreign_key
-          @key_column = key_column
-          @value_column = value_column
+          @table = options.fetch(:table, :"#{repo.main_table}_#{property_name}")
+          @foreign_key = options(:foreign_key,
+                                 :"#{repo.main_table.to_s.singularize}_id")
+          @key_column = options(:key_column, :key)
+          @value_column = options(:value_column, :value)
 
-          @dataset    = @repository.db[@table]
+          @dataset = @repository.db[@table]
         end
 
         def load_value(_row = nil, id = nil, _properties = nil)

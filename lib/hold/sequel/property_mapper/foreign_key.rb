@@ -19,19 +19,17 @@ module Hold
         # trying to store the object in question with this foreign key property.
         # In the absence of this setting, values without an ID will cause an
         # exception
-        def initialize(repo, property_name,
-                       model_class:, table: nil, auto_store_new: false,
-                       column_name: :"#{property_name}_id")
+        def initialize(repo, property_name, options = {})
           super(repo, property_name)
 
-          @table = table || @repository.main_table
-          @column_name = column_name
+          @table = options.fetch(:table, @repository.main_table)
+          @column_name = options.fetch(:column_name, :"#{property_name}_id")
           @column_alias = :"#{@table}_#{@column_name}"
           @column_qualified =
             ::Sequel::SQL::QualifiedIdentifier.new(@table, @column_name)
 
-          @auto_store_new = auto_store_new
-          @model_class = model_class
+          @auto_store_new = options.fetch(:auto_store_new, false)
+          @model_class = options.fetch(:model_class)
         end
 
         def columns_for_select
