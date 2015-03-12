@@ -1,3 +1,5 @@
+require 'hold/sequel/property_mapper'
+
 module Hold
   # Sequel namespace
   module Sequel
@@ -47,19 +49,21 @@ module Hold
         end
 
         # Some convenience mapper DSL methods for each of the mapper subclasses:
-        { column: 'Column',      foreign_key: 'ForeignKey',
-          one_to_many: 'OneToMany',   many_to_many: 'ManyToMany',
-          created_at: 'CreatedAt',   updated_at: 'UpdatedAt',
-          hash_property: 'Hash',        array_property: 'Array',
-          transformed_column: 'TransformedColumn',
-          custom_query: 'CustomQuery',
-          custom_query_single_value: 'CustomQuerySingleValue'
+        { column: PropertyMapper::Column,
+          hash_property: PropertyMapper::Hash,
+          array_property: PropertyMapper::Array,
+          created_at: PropertyMapper::CreatedAt,
+          updated_at: PropertyMapper::UpdatedAt,
+          foreign_key: PropertyMapper::ForeignKey,
+          one_to_many: PropertyMapper::OneToMany,
+          many_to_many: PropertyMapper::ManyToMany,
+          custom_query: PropertyMapper::CustomQuery,
+          transformed_column: PropertyMapper::TransformedColumn,
+          custom_query_single_value: PropertyMapper::CustomQuerySingleValue
         }.each do |name, mapper_class|
-          class_eval <<-EOS, __FILE__, __LINE__ + 1
-def map_#{name}(property_name, options={}, &block)
-  map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
-end
-          EOS
+          define_method(:"map_#{name}") do |property_name, options={}, &block|
+            map_property(property_name, mapper_class, options, &block)
+          end
         end
       end
 

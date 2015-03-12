@@ -1,3 +1,15 @@
+require 'hold/sequel/property_mapper/array'
+require 'hold/sequel/property_mapper/column'
+require 'hold/sequel/property_mapper/created_at'
+require 'hold/sequel/property_mapper/custom_query'
+require 'hold/sequel/property_mapper/custom_query_single_value'
+require 'hold/sequel/property_mapper/foreign_key'
+require 'hold/sequel/property_mapper/hash'
+require 'hold/sequel/property_mapper/many_to_many'
+require 'hold/sequel/property_mapper/one_to_many'
+require 'hold/sequel/property_mapper/transformed_column'
+require 'hold/sequel/property_mapper/updated_at'
+
 module Hold
   module Sequel
     # Abstract superclass.
