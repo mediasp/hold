@@ -67,17 +67,27 @@ module Hold
         end
 
         def distinct
-          @distinct.nil? ? @options.fetch(:distinct, false) : @distinct
+          if defined(@distinct)
+            @distinct
+          else
+            @options.fetch(:distinct, false)
+          end
         end
 
         def order_column
-          if @order_column.nil? then @options.fetch(:order_column, false)
-          else @order_column
+          if defined(@order_column)
+            @order_column
+          else
+            @options.fetch(:order_column, false)
           end
         end
 
         def writeable
-          @writeable.nil? ? @options.fetch(:writeable, false) : @writeable
+          if defined(@writeable)
+            @writeable
+          else
+            @options.fetch(:writeable, false)
+          end
         end
 
         def manual_cascade_delete
@@ -86,8 +96,10 @@ module Hold
         end
 
         def auto_store_new
-          if @auto_store_new.nil? then @options.fetch(:auto_store_new, false)
-          else @auto_store_new
+          if defined(@auto_store_new)
+            @auto_store_new
+          else
+            @options.fetch(:auto_store_new, false)
           end
         end
 

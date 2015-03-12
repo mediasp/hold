@@ -29,7 +29,7 @@ module Hold
     end
 
     def property?(property_name)
-      !get_property(property_name).nil?
+      get_property(property_name)
     end
     alias_method :has_property?, :property?
 

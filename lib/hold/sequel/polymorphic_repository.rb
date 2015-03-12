@@ -100,7 +100,7 @@ module Hold
       end
 
       def contains_id?(id)
-        !@dataset.filter(@id_column => id).select(1).limit(1).single_value.nil?
+        @dataset.filter(@id_column => id).select(1).limit(1).single_value
       end
 
       def store(object)

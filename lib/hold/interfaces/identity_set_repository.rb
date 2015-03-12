@@ -68,7 +68,7 @@ module Hold
     end
 
     def contains_id?(id)
-      !get_by_id(id).nil?
+      get_by_id(id)
     end
 
     def get_many_by_ids(ids)

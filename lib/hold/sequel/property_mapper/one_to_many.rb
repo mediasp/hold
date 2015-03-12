@@ -39,12 +39,11 @@ module Hold
 
           @foreign_key_property_name = options[:property]
           @model_class = options[:model_class]
-          @writeable = options[:writeable] || false
+          @writeable = options.fetch(:writeable, false)
           @order_property = options[:order_property]
-          @order_direction = options[:order_direction] || :asc
+          @order_direction = options.fetch(:order_direction, :asc)
 
-          @manual_cascade_delete =
-            (value = options[:manual_cascade_delete].nil?) ? true : value
+          @manual_cascade_delete = options.fetch(:manual_cascade_delete, true)
 
           @denormalized_count_column = options[:denormalized_count_column]
         end

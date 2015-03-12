@@ -155,7 +155,7 @@ module Hold
       end
 
       def allocates_ids?
-        !id_sequence_table.nil?
+        defined(id_sequence_table)
       end
 
       # is this repository capable of loading instances of the given model
@@ -344,7 +344,9 @@ end
       # queries.
 
       def query(properties = nil, &block)
-        properties = default_properties if properties == true || properties.nil?
+        unless properties.respond_to? :each
+          properties = default_properties
+        end
         Query.new(self, properties, &block)
       end
 
