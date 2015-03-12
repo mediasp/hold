@@ -6,8 +6,6 @@ module Hold
   class StdError < StandardError
     extend Error
 
-    attr_reader :original
-
     def initialize(msg = nil, original = $ERROR_INFO)
       super(msg)
       @original = original
@@ -38,50 +36,50 @@ module Hold
   # Order Property Conflict
   class OrderPropertyConflict < StdError
     def initialize(property, order_property)
-      @msg = 'OneToMany mapper: one of the new values for mapped '\
+      super('OneToMany mapper: one of the new values for mapped '\
         "property #{property} has an existing value for the "\
         "order property #{order_property} property which is not "\
-        'equal to its index in the array'
+        'equal to its index in the array')
     end
   end
 
   # No Repository Found
   class NoRepoFound < StdError
     def initialize(type)
-      @msg = "PolymorphicRepository: no repo found for type #{type}"
+      super("PolymorphicRepository: no repo found for type #{type}")
     end
   end
 
   # Expected Foreign Key
   class ExpectedForeignKey < StdError
     def initialize(property)
-      @msg = "OneToManyMapper: Expected ForeignKey mapper with name #{property}"
+      super("OneToManyMapper: Expected ForeignKey mapper with name #{property}")
     end
   end
 
   # Mismatched Target
   class MismatchedTarget < StdError
     def initialize(target_repo, model)
-      @msg = "OneToManyMapper: ForeignKey mapper's target repo "\
+      super("OneToManyMapper: ForeignKey mapper's target repo "\
       "#{target_repo.inspect} can't get our repository's "\
-      "model_class #{model}"
+      "model_class #{model}")
     end
   end
 
   # Already Persisted
   class AlreadyPersisted < StdError
     def initialize
-      @msg = 'OneToMany mapper: already-persisted values are only '\
+      super('OneToMany mapper: already-persisted values are only '\
         'allowed for property update where they were already a value '\
-        'of the property beforehand'
+        'of the property beforehand')
     end
   end
 
   # No ID
   class NoID < StdError
     def initialize(property)
-      @msg = "value for ManyToMany mapped property #{property} has no "\
-        'id, and :auto_store_new not specified'
+      super("value for ManyToMany mapped property #{property} has no "\
+        'id, and :auto_store_new not specified')
     end
   end
 end
