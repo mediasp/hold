@@ -388,12 +388,20 @@ end
       # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
       def get_many_by_ids(ids, properties: nil, lazy: false)
         if can_construct_from_id_alone?(properties)
-          return ids.map { |id| construct_entity_from_id(id) }
+          construct_many_entities_from_ids(ids)
+        else
+          construct_many(ids, properties, lazy)
         end
+      end
 
+      def construct_many_entities_from_ids(ids)
+        ids.map { |id| construct_entity_from_id(id) }
+      end
+
+      def construct_many(ids, properties, lazy)
         results = query(properties) do |ds, mapping|
           id_filter = identity_mapper
-                      .make_multi_filter(ids.uniq, mapping[identity_property])
+          .make_multi_filter(ids.uniq, mapping[identity_property])
           ds.filter(id_filter)
         end.to_a(lazy)
 
@@ -437,10 +445,10 @@ end
       # in the repository before calling store_new or update as appropriate.
       def store(entity)
         transaction do
-          if (id = entity.id)
-            contains_id?(id) ? update(entity) : store_new(entity)
+          if contains?(entity)
+            update(entity)
           else
-            allocates_ids? ? store_new(entity) : (fail Hold::MissingIdentity)
+            store_new(entity)
           end
         end
         entity

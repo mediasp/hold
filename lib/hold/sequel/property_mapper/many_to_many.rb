@@ -215,8 +215,9 @@ module Hold
         def post_update(entity, update_entity, _rows, _res_pre_update = nil)
           return unless writeable
           update_values = update_entity[@property_name] || (return)
-          delete_join_table_rows(entity.id)
-          insert_join_table_rows(entity, entity.id, update_values)
+          id = entity.id
+          delete_join_table_rows(id)
+          insert_join_table_rows(entity, id, update_values)
         end
 
         def pre_delete(entity)

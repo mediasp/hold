@@ -9,10 +9,11 @@ module Hold
         def initialize(repo, property_name, options = {})
           super(repo, property_name)
 
-          @table = options.fetch(:table, :"#{repo.main_table}_#{property_name}")
+          main_table = repo.main_table
+
+          @table = options.fetch(:table, :"#{main_table}_#{property_name}")
           @foreign_key =
-            options.fetch(:foreign_key,
-                          :"#{repo.main_table.to_s.singularize}_id")
+            options.fetch(:foreign_key, :"#{main_table.to_s.singularize}_id")
 
           @value_column = options.fetch(:value_column, :value)
           @order_column = options[:order_column]
@@ -50,10 +51,11 @@ module Hold
 
         def post_update(entity, update_entity, _rows, _data_from_pre_update)
           array = update_entity[@property_name] || (return)
-          @dataset.filter(@foreign_key => entity.id).delete
+          id = entity.id
+          @dataset.filter(@foreign_key => id).delete
           insert_rows = []
           array.each_with_index do |v, i|
-            row = { @foreign_key => entity.id, @value_column => v }
+            row = { @foreign_key => id, @value_column => v }
             row[@order_column] = i if @order_column
             insert_rows << row
           end

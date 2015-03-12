@@ -64,8 +64,9 @@ module Hold
               unless mapper.is_a?(PropertyMapper::ForeignKey)
                 fail ExpectedForeignKey @foreign_key_property_name
               end
-              unless mapper.target_repo.can_get_class?(@repository.model_class)
-                fail MismatchedTarget target_repo, @repository.model_class
+              model = @repository.model_class
+              unless mapper.target_repo.can_get_class?(model)
+                fail MismatchedTarget target_repo, model
               end
             end
         end

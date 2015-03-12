@@ -17,11 +17,11 @@ module Hold
       def initialize(cache, serializer, key_prefix = nil)
         @cache = cache
         @serializer = serializer
-        @key_prefix = key_prefix
+        @key_prefix = key_prefix || ""
       end
 
       def cache_key(key)
-        @key_prefix ? @key_prefix + key.to_s : key.to_s
+        "#{@key_prefix}#{key}"
       end
 
       def set_with_key(key, entity)

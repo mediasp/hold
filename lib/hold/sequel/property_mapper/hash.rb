@@ -9,9 +9,10 @@ module Hold
         def initialize(repo, property_name, options = {})
           super(repo, property_name)
 
-          @table = options.fetch(:table, :"#{repo.main_table}_#{property_name}")
-          @foreign_key = options(:foreign_key,
-                                 :"#{repo.main_table.to_s.singularize}_id")
+          main_table = repo.main_table.to_s
+
+          @table = options.fetch(:table, :"#{main_table}_#{property_name}")
+          @foreign_key = options(:foreign_key, :"#{main_table.singularize}_id")
           @key_column = options(:key_column, :key)
           @value_column = options(:value_column, :value)
 
@@ -49,9 +50,10 @@ module Hold
 
         def post_update(entity, update_entity, _rows, _data_from_pre_update)
           hash = update_entity[@property_name] || (return)
-          @dataset.filter(@foreign_key => entity.id).delete
+          id = entity.id
+          @dataset.filter(@foreign_key => id).delete
           @dataset.multi_insert(hash.map do |k, v|
-            { @foreign_key => entity.id, @key_column => k, @value_column => v }
+            { @foreign_key => id, @key_column => k, @value_column => v }
           end)
         end
 

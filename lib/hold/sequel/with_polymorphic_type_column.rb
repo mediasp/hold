@@ -75,8 +75,11 @@ module Hold
 
         def qualified_type_column
           @qualified_type_column ||=
-            ::Sequel::SQL::QualifiedIdentifier.new(self.class.type_column_table,
-                                                   self.class.type_column)
+            begin
+              klass = self.class
+              ::Sequel::SQL::QualifiedIdentifier.new(klass.type_column_table,
+                                                     klass.type_column)
+            end
         end
 
         def aliased_type_column
@@ -136,8 +139,9 @@ module Hold
         def tables_by_property(properties)
           tables = super
           unless restricted_to_types && restricted_to_types.length == 1
-            unless tables.include?(self.class.type_column_table)
-              tables << self.class.type_column_table
+            type_column_table = self.class.type_column_table
+            unless tables.include?(type_column_table)
+              tables << type_column_table
             end
           end
           tables
@@ -165,10 +169,12 @@ module Hold
 
         def insert_row_for_entity(entity, table, id = nil)
           row = super
-          if table == self.class.type_column_table
-            row[self.class.type_column] =
-              self.class .class_to_type_mapping[entity.class] ||
-              (fail "WithPolymorphicTypeColumn: class #{entity.class} not" \
+          this_class = self.class
+          entity_class = entity.class
+          if table == this_class.type_column_table
+            row[this_class.type_column] =
+              this_class.class_to_type_mapping[entity_class] ||
+              (fail "WithPolymorphicTypeColumn: class #{entity_class} not" \
                      ' found in mapping')
           end
           row
