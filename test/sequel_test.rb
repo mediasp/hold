@@ -19,7 +19,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       varchar :abc
       varchar :def
     end
-    Hold::Sequel.identity_set_repository(AbcDef, :test_table) do |repo|
+    Hold::Sequel::IdentitySetRepository.build(AbcDef, :test_table) do |repo|
       repo.map_column :abc
       repo.map_column :def
     end.new(@db)
@@ -118,7 +118,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :string, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Hold::Sequel.identity_set_repository(@model_class, :test_table) do |r|
+      repo = Hold::Sequel::IdentitySetRepository.build(@model_class, :test_table) do |r|
         r.map_column :string
       end.new(@db)
       entity = @model_class.new(string: 'foo')
@@ -134,7 +134,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :string_column_with_particular_name, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:string)
-      repo = Hold::Sequel.identity_set_repository(@model_class, :test_table) do |r|
+      repo = Hold::Sequel::IdentitySetRepository.build(@model_class, :test_table) do |r|
         r.map_column :string, column_name: :string_column_with_particular_name
       end.new(@db)
       entity = @model_class.new(string: 'foo')
@@ -152,7 +152,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         float :float
       end
       @model_class = ThinModels::StructWithIdentity(:integer, :datetime, :float)
-      repo = Hold::Sequel.identity_set_repository(@model_class, :test_table) do |r|
+      repo = Hold::Sequel::IdentitySetRepository.build(@model_class, :test_table) do |r|
         r.map_column :integer
         r.map_column :datetime
         r.map_column :float
@@ -182,7 +182,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         varchar :foo, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:foo)
-      repo = Hold::Sequel.identity_set_repository(@model_class, :test_table) do |r|
+      repo = Hold::Sequel::IdentitySetRepository.build(@model_class, :test_table) do |r|
         r.map_transformed_column :foo,
           to_sequel: proc { |v| v.join(',') },
           from_sequel: proc { |v| v.split(',') }
@@ -203,7 +203,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         datetime :updated_at, null: false
       end
       @model_class = ThinModels::StructWithIdentity(:created_at, :updated_at)
-      @repo = Hold::Sequel.identity_set_repository(@model_class, :test_table) do |repo|
+      @repo = Hold::Sequel::IdentitySetRepository.build(@model_class, :test_table) do |repo|
         # the args here can all actually be left out as they're the defaults, but to demonstrate:
         repo.map_created_at :created_at
         repo.map_updated_at :updated_at, column_name: :updated_at
@@ -251,10 +251,10 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       end
       bar_model_class = @bar_model_class = ThinModels::StructWithIdentity(:string)
       @foo_model_class = ThinModels::StructWithIdentity(:bar)
-      bar_repo = @bar_repo = Hold::Sequel.identity_set_repository(@bar_model_class, :bar) do |repo|
+      @bar_repo = Hold::Sequel::IdentitySetRepository.build(@bar_model_class, :bar) do |repo|
         repo.map_column :string
       end.new(@db)
-      @foo_repo = Hold::Sequel.identity_set_repository(@foo_model_class, :foo) do |repo|
+      @foo_repo = Hold::Sequel::IdentitySetRepository.build(@foo_model_class, :foo) do |repo|
         repo.map_foreign_key :bar, model_class: bar_model_class
       end.new(@db)
       @foo_repo.mapper(:bar).target_repo = @bar_repo
@@ -361,10 +361,10 @@ describe 'Hold::Sequel::IdentitySetRepository' do
       bar_model_class = @bar_model_class = Bar #ThinModels::StructWithIdentity(:foos)
       foo_model_class = @foo_model_class = Foo #ThinModels::StructWithIdentity(:bar)
       # foo_repo = 123
-      bar_repo = @bar_repo = Hold::Sequel.identity_set_repository(@bar_model_class, :bar) do |repo|
+      bar_repo = @bar_repo = Hold::Sequel::IdentitySetRepository.build(@bar_model_class, :bar) do |repo|
         repo.map_one_to_many :foos, model_class: foo_model_class, property: :bar
       end.new(@db)
-      foo_repo = @foo_repo = Hold::Sequel.identity_set_repository(@foo_model_class, :foo) do |repo|
+      foo_repo = @foo_repo = Hold::Sequel::IdentitySetRepository.build(@foo_model_class, :foo) do |repo|
         repo.map_foreign_key :bar, model_class: bar_model_class
       end.new(@db)
 
@@ -469,7 +469,7 @@ describe 'Hold::Sequel::IdentitySetRepository' do
         integer :base_id
         varchar :def
       end
-      Hold::Sequel.identity_set_repository(AbcDef, :base) do |repo|
+      Hold::Sequel::IdentitySetRepository.build(AbcDef, :base) do |repo|
         repo.use_table :base
         repo.use_table :extra, id_column: :base_id
         repo.map_column :abc

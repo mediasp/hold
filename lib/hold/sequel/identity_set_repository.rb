@@ -3,21 +3,21 @@ require 'hold/sequel/property_mapper'
 module Hold
   # Sequel namespace
   module Sequel
-    def self.identity_set_repository(model_class, main_table = nil)
-      Class.new(IdentitySetRepository) do
-        set_model_class model_class
-
-        use_table(main_table, id_column: :id, id_sequence: true) if main_table
-
-        yield self if block_given?
-      end
-    end
-
     # Identity Set Repository
     class IdentitySetRepository
       include Hold::IdentitySetRepository
 
       class << self
+        def build(model_class, main_table = nil)
+          Class.new(IdentitySetRepository) do
+            set_model_class model_class
+            if main_table
+              use_table(main_table, id_column: :id, id_sequence: true)
+            end
+            yield self if block_given?
+          end
+        end
+
         def model_class
           @model_class ||=
             (superclass.model_class if superclass < IdentitySetRepository)
@@ -78,32 +78,6 @@ module Hold
         @db = db
       end
 
-      def tables
-        @tables ||=
-          self.class.tables.each_with_object([]) do |(name, _), arr|
-            arr << name
-          end
-      end
-
-      def tables_id_columns
-        @tables_id_columns ||=
-          self.class.tables
-          .each_with_object({}) do |(name, options), hash|
-            hash[name] = options[:id_column]
-          end
-      end
-
-      def id_sequence_table
-        @id_sequence_table ||=
-          begin
-            name, _ = self.class.tables
-                      .find { |(_, options)| options[:id_sequence] }
-            name
-          end
-      end
-
-      attr_writer :id_sequence_table
-
       def main_table
         @main_table ||=
           begin
@@ -113,24 +87,13 @@ module Hold
           end
       end
 
-      def identity_property
-        @identity_property ||= :id
-      end
-
       def identity_mapper
         @identity_mapper ||=
           PropertyMapper::Identity.new(self, identity_property)
       end
 
-      def property_mappers
-        @property_mappers ||=
-          begin
-            mappers = { identity_property => identity_mapper }
-            self.class.property_mapper_args
-            .each_with_object(mappers) do |(prop, mapper, opts, block), hash|
-              hash[prop] = mapper.new(self, prop, opts, &block)
-            end.freeze
-          end
+      def identity_property
+        @identity_property ||= :id
       end
 
       def default_properties
@@ -148,14 +111,8 @@ module Hold
           end
       end
 
-      JUST_ID = [:id].freeze
-
       def inspect
         "<##{self.class}: #{model_class}>"
-      end
-
-      def allocates_ids?
-        defined(id_sequence_table)
       end
 
       # is this repository capable of loading instances of the given model
@@ -196,148 +153,6 @@ module Hold
 
       def table_id_column(table)
         tables_id_columns[table]
-      end
-
-      private
-
-      # mini DSL for use in mapper_config block passed to constructor, which is
-      # instance_evalled:
-
-      def map_property(property_name, mapper_class = PropertyMapper, *property,
-                       &block)
-        fail unless mapper_class <= PropertyMapper
-        property_mappers[property_name] =
-          mapper_class.new(self, property_name, *property, &block)
-      end
-
-      # Some convenience mapper DSL methods for each of the mapper subclasses:
-      { column: 'Column',      foreign_key: 'ForeignKey',
-        one_to_many: 'OneToMany',   many_to_many: 'ManyToMany',
-        created_at: 'CreatedAt',   updated_at: 'UpdatedAt',
-        hash_property: 'Hash',        array_property: 'Array',
-        custom_query: 'CustomQuery',
-        custom_query_single_value: 'CustomQuerySingleValue'
-      }.each do |name, mapper_class|
-        class_eval <<-EOS, __FILE__, __LINE__ + 1
-def map_#{name}(property_name, options={}, &block)
-  map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
-end
-        EOS
-      end
-
-      def use_table(name, options = {})
-        tables << name
-        tables_id_columns[name] = options[:id_column] || :id
-        self.id_sequence_table = name if options[:id_sequence]
-      end
-
-      # Some helpers
-
-      def translate_exceptions(&block)
-        Hold::Sequel.translate_exceptions(&block)
-      end
-
-      def insert_row_for_entity(entity, table, id = nil)
-        property_mappers.values.each_with_object({}) do |mapper, row|
-          row.merge! mapper.build_insert_row(entity, table, id)
-        end
-      end
-
-      def update_row_for_entity(update_entity, table)
-        property_mappers.values.each_with_object({}) do |mapper, row|
-          row.merge! mapper.build_update_row(update_entity, table)
-        end
-      end
-
-      public
-
-      def construct_entity(property_hash, _ = nil)
-        # new_skipping_checks is supported by ThinModels::Struct(::Typed) and
-        # skips any type checks or attribute name checks on the supplied
-        # attributes.
-        @model_class_new_method ||=
-          if model_class.respond_to?(:new_skipping_checks)
-            :new_skipping_checks
-          else
-            :new
-          end
-
-        model_class
-          .send(@model_class_new_method, property_hash) do |model, property|
-          get_property(model, property)
-        end
-      end
-
-      def construct_entity_from_id(id)
-        model_class.new(identity_property => id) do |model, property|
-          get_property(model, property)
-        end
-      end
-
-      # this determines if an optimisation can be done whereby if only the ID
-      # property is requested to be loaded, the object(s) can be constructed
-      # directly from their ids without needing to be fetched from the database.
-      def can_construct_from_id_alone?(properties)
-        properties == JUST_ID
-      end
-
-      def dataset_to_select_tables(*tables)
-        main_table, *other_tables = tables
-        main_id = identity_mapper.qualified_column_name(main_table)
-        other_tables.inject(@db[main_table]) do |dataset, table|
-          dataset.join(table,
-                       identity_mapper.qualified_column_name(table) => main_id)
-        end
-      end
-
-      def columns_aliases_and_tables_for_properties(properties)
-        [columns_by_property(properties),
-         aliases_by_property(properties),
-         tables_by_property(properties)]
-      end
-
-      def columns_by_property(properties)
-        id_cols = identity_mapper.columns_for_select(main_table)
-        columns_by_property = { identity_property => id_cols }
-
-        properties
-          .reject { |property| property == identity_property }
-          .each_with_object(columns_by_property) do |property, hash|
-            hash[p] = mapper(property).columns_for_select
-          end
-      end
-
-      def aliases_by_property(properties)
-        id_aliases =
-          identity_mapper
-          .aliases_for_select(main_table)
-
-        properties
-          .reject { |property| property == identity_property }
-          .each_with_object(id_aliases) do |property, arr|
-            arr.concat mapper(property).aliases_for_select
-          end
-          .uniq
-      end
-
-      def tables_by_property(properties)
-        tables = properties
-                 .reject { |property| property == identity_property }
-                 .each_with_object([]) do |property, arr|
-                   ts = mapper(property).tables_for_select
-                   arr.concat(ts)
-                 end
-
-        tables.unshift(main_table) if tables.delete(main_table)
-
-        id_tables = identity_mapper.tables_for_select(tables.first)
-
-        tables.concat(id_tables)
-        tables.uniq
-      end
-
-      def transaction(*args, &block)
-        @db.transaction(*args, &block)
       end
 
       # This is the main mechanism to retrieve stuff from the repo via custom
@@ -388,20 +203,6 @@ end
         end
       end
 
-      def construct_many_entities_from_ids(ids)
-        ids.map { |id| construct_entity_from_id(id) }
-      end
-
-      def construct_many(ids, properties, lazy)
-        results = query(properties) do |ds, mapping|
-          id_filter = identity_mapper
-          .make_multi_filter(ids.uniq, mapping[identity_property])
-          ds.filter(id_filter)
-        end.to_a(lazy)
-
-        ids.map { |id| results.find { |object| object.id == id } }
-      end
-
       def get_many_by_property(property, value, options = {})
         properties_to_fetch ||= default_properties.dup
         properties_to_fetch[property] = true
@@ -448,6 +249,49 @@ end
         entity
       end
 
+      def update_by_id(id, update_entity)
+        entity = construct_entity(identity_property => id)
+        update(entity, update_entity)
+      end
+
+      def delete_id(id)
+        entity = construct_entity(identity_property => id)
+        delete(entity)
+      end
+
+      def update(entity, update_entity = entity)
+        id = entity.id || (fail Hold::MissingIdentity)
+        transaction do
+          data_from_mappers = pre_update(entity, update_entity)
+          rows = tables.each_with_object({}) do |table, hash|
+            hash[table] = update_row_for_entity(update_entity, table)
+          end
+          update_rows(id, rows)
+          post_update(entity, update_entity, rows, data_from_mappers)
+          entity.respond_to?(:merge) ? entity.merge!(update_entity) : entity
+        end
+      end
+
+      # deletes rows for this id in all tables of the repo.
+      #
+      # note: order of
+      # deletes is important here if you have foreign key dependencies between
+      # the ID columns of the different tables; this goes in the reverse order
+      # to that used for inserts by store_new, which in turn is determined by
+      # the order of your use_table declarations
+      def delete(entity)
+        id = entity.id || (fail Hold::MissingIdentity)
+        transaction do
+          pre_delete(entity)
+          tables.reverse_each do |table|
+            id_filter = identity_mapper
+                        .make_filter(id, [tables_id_columns[table]])
+            @db[table].filter(id_filter).delete
+          end
+          post_delete(entity)
+        end
+      end
+
       # inserts rows into all relevant tables for the given entity.
       # ensures that where one of the tables is used for an id sequence,
       # that this row is inserted first and the resulting insert_id
@@ -462,6 +306,153 @@ end
           insert_id, rows = insert(entity)
           post_insert(entity, rows, insert_id)
           entity
+        end
+      end
+
+      # ArrayCells for top-level collections
+      def array_cell_for_dataset(&block)
+        QueryArrayCell.new(self, &block)
+      end
+
+      def columns_by_property(properties)
+        id_cols = identity_mapper.columns_for_select(main_table)
+        columns_by_property = { identity_property => id_cols }
+
+        properties
+          .reject { |property| property == identity_property }
+          .each_with_object(columns_by_property) do |property, hash|
+            hash[p] = mapper(property).columns_for_select
+          end
+      end
+
+      def tables_by_property(properties)
+        tables = properties
+                 .reject { |property| property == identity_property }
+                 .each_with_object([]) do |property, arr|
+                   ts = mapper(property).tables_for_select
+                   arr.concat(ts)
+                 end
+
+        tables.unshift(main_table) if tables.delete(main_table)
+
+        id_tables = identity_mapper.tables_for_select(tables.first)
+
+        tables.concat(id_tables)
+        tables.uniq
+      end
+
+      def aliases_by_property(properties)
+        id_aliases =
+          identity_mapper
+          .aliases_for_select(main_table)
+
+        properties
+          .reject { |property| property == identity_property }
+          .each_with_object(id_aliases) do |property, arr|
+            arr.concat mapper(property).aliases_for_select
+          end
+          .uniq
+      end
+
+
+      def dataset_to_select_tables(*tables)
+        main_table, *other_tables = tables
+        main_id = identity_mapper.qualified_column_name(main_table)
+        other_tables.inject(@db[main_table]) do |dataset, table|
+          dataset.join(table,
+                       identity_mapper.qualified_column_name(table) => main_id)
+        end
+      end
+
+      def construct_entity(property_hash, _ = nil)
+        # new_skipping_checks is supported by ThinModels::Struct(::Typed) and
+        # skips any type checks or attribute name checks on the supplied
+        # attributes.
+        @model_class_new_method ||=
+          if model_class.respond_to?(:new_skipping_checks)
+            :new_skipping_checks
+          else
+            :new
+          end
+
+        model_class
+          .send(@model_class_new_method, property_hash) do |model, property|
+          get_property(model, property)
+        end
+      end
+
+      private
+
+      def construct_entity_from_id(id)
+        model_class.new(identity_property => id) do |model, property|
+          get_property(model, property)
+        end
+      end
+
+      # this determines if an optimisation can be done whereby if only the ID
+      # property is requested to be loaded, the object(s) can be constructed
+      # directly from their ids without needing to be fetched from the database.
+      def can_construct_from_id_alone?(properties)
+        properties == JUST_ID
+      end
+
+      def columns_aliases_and_tables_for_properties(properties)
+        [columns_by_property(properties),
+         aliases_by_property(properties),
+         tables_by_property(properties)]
+      end
+
+      def transaction(*args, &block)
+        @db.transaction(*args, &block)
+      end
+
+
+      # mini DSL for use in mapper_config block passed to constructor, which is
+      # instance_evalled:
+
+      def map_property(property_name, mapper_class = PropertyMapper, *property,
+                       &block)
+        fail unless mapper_class <= PropertyMapper
+        property_mappers[property_name] =
+          mapper_class.new(self, property_name, *property, &block)
+      end
+
+      # Some convenience mapper DSL methods for each of the mapper subclasses:
+      { column: 'Column',      foreign_key: 'ForeignKey',
+        one_to_many: 'OneToMany',   many_to_many: 'ManyToMany',
+        created_at: 'CreatedAt',   updated_at: 'UpdatedAt',
+        hash_property: 'Hash',        array_property: 'Array',
+        custom_query: 'CustomQuery',
+        custom_query_single_value: 'CustomQuerySingleValue'
+      }.each do |name, mapper_class|
+        class_eval <<-EOS, __FILE__, __LINE__ + 1
+def map_#{name}(property_name, options={}, &block)
+  map_property(property_name, PropertyMapper::#{mapper_class}, options, &block)
+end
+        EOS
+      end
+
+      def use_table(name, options = {})
+        tables << name
+        tables_id_columns[name] = options[:id_column] || :id
+        self.id_sequence_table = name if options[:id_sequence]
+      end
+
+      # Some helpers
+
+      def translate_exceptions(&block)
+        Hold::Sequel.translate_exceptions(&block)
+      end
+
+      def insert_row_for_entity(entity, table, id = nil)
+        property_mappers.values.each_with_object({}) do |mapper, row|
+          row.merge! mapper.build_insert_row(entity, table, id)
+        end
+      end
+
+      def update_row_for_entity(update_entity, table)
+        property_mappers.values.each_with_object({}) do |mapper, row|
+          row.merge! mapper.build_update_row(update_entity, table)
         end
       end
 
@@ -517,23 +508,6 @@ end
         end
       end
 
-      def update(entity, update_entity = entity)
-        id = entity.id || (fail Hold::MissingIdentity)
-        transaction do
-          data_from_mappers = pre_update(entity, update_entity)
-
-          rows = tables.each_with_object({}) do |table, hash|
-            hash[table] = update_row_for_entity(update_entity, table)
-          end
-
-          update_rows(id, rows)
-
-          post_update(entity, update_entity, rows, data_from_mappers)
-
-          entity.respond_to?(:merge) ? entity.merge!(update_entity) : entity
-        end
-      end
-
       def update_rows(id, rows)
         rows.reject { |_, row| row.empty? }
           .each do |table, row|
@@ -568,31 +542,6 @@ end
         end
       end
 
-      def update_by_id(id, update_entity)
-        entity = construct_entity(identity_property => id)
-        update(entity, update_entity)
-      end
-
-      # deletes rows for this id in all tables of the repo.
-      #
-      # note: order of
-      # deletes is important here if you have foreign key dependencies between
-      # the ID columns of the different tables; this goes in the reverse order
-      # to that used for inserts by store_new, which in turn is determined by
-      # the order of your use_table declarations
-      def delete(entity)
-        id = entity.id || (fail Hold::MissingIdentity)
-        transaction do
-          pre_delete(entity)
-          tables.reverse_each do |table|
-            id_filter = identity_mapper
-                        .make_filter(id, [tables_id_columns[table]])
-            @db[table].filter(id_filter).delete
-          end
-          post_delete(entity)
-        end
-      end
-
       # Remember to call super if you override this.
       # If you do any extra deleting in an overridden pre_delete, call super
       # beforehand
@@ -608,22 +557,68 @@ end
         Array(@observers).each { |observer| observer.post_delete(self, entity) }
       end
 
-      def delete_id(id)
-        entity = construct_entity(identity_property => id)
-        delete(entity)
-      end
-
-      # ArrayCells for top-level collections
-
-      def array_cell_for_dataset(&block)
-        QueryArrayCell.new(self, &block)
-      end
-
       def count_dataset
         dataset = dataset_to_select_tables(main_table)
         dataset = yield dataset if block_given?
         dataset.count
       end
+
+      def construct_many_entities_from_ids(ids)
+        ids.map { |id| construct_entity_from_id(id) }
+      end
+
+      def construct_many(ids, properties, lazy)
+        results = query(properties) do |ds, mapping|
+          id_filter = identity_mapper
+          .make_multi_filter(ids.uniq, mapping[identity_property])
+          ds.filter(id_filter)
+        end.to_a(lazy)
+
+        ids.map { |id| results.find { |object| object.id == id } }
+      end
+
+      def tables
+        @tables ||=
+          self.class.tables.each_with_object([]) do |(name, _), arr|
+            arr << name
+          end
+      end
+
+      def tables_id_columns
+        @tables_id_columns ||=
+          self.class.tables
+          .each_with_object({}) do |(name, options), hash|
+            hash[name] = options[:id_column]
+          end
+      end
+
+      def id_sequence_table
+        @id_sequence_table ||=
+          begin
+            name, _ = self.class.tables
+                      .find { |(_, options)| options[:id_sequence] }
+            name
+          end
+      end
+
+      attr_writer :id_sequence_table
+
+      def property_mappers
+        @property_mappers ||=
+          begin
+            mappers = { identity_property => identity_mapper }
+            self.class.property_mapper_args
+            .each_with_object(mappers) do |(prop, mapper, opts, block), hash|
+              hash[prop] = mapper.new(self, prop, opts, &block)
+            end.freeze
+          end
+      end
+
+      def allocates_ids?
+        defined(id_sequence_table)
+      end
+
+      JUST_ID = [:id].freeze
     end
   end
 end
