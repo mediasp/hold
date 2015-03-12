@@ -38,8 +38,9 @@ module Hold
 
       def get_by_id(id)
         (json = @cache.get_with_key(cache_key(id))) &&
-          @serializer.deserialize(json).each_with_object({}) do |(k, v), memo|
-            memo[k.to_sym] = v
+          @serializer.deserialize(json)
+          .each_with_object({}) do |(key, value), memo|
+            memo[key.to_sym] = value
           end
       end
 

@@ -28,7 +28,7 @@ module Hold
         end
 
         def load_values(_rows = nil, ids = nil, _properties = nil, &block)
-          results = Hash.new { |h, k| h[k] = {} }
+          results = Hash.new { |hash, key| hash[key] = {} }
           select_all.filter(@foreign_key => ids).each do |row|
             results[row[:id]][row[:key]] = row[:value]
           end
@@ -41,10 +41,10 @@ module Hold
 
         def post_insert(entity, _rows, last_insert_id = nil)
           hash = entity[@property_name] || (return)
-          @dataset.multi_insert(hash.map do |k, v|
+          @dataset.multi_insert(hash.map do |key, value|
             { @foreign_key => last_insert_id,
-              @key_column => k,
-              @value_column => v }
+              @key_column => key,
+              @value_column => value }
           end)
         end
 
@@ -52,8 +52,8 @@ module Hold
           hash = update_entity[@property_name] || (return)
           id = entity.id
           @dataset.filter(@foreign_key => id).delete
-          @dataset.multi_insert(hash.map do |k, v|
-            { @foreign_key => id, @key_column => k, @value_column => v }
+          @dataset.multi_insert(hash.map do |key, value|
+            { @foreign_key => id, @key_column => key, @value_column => value }
           end)
         end
 

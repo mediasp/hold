@@ -39,8 +39,8 @@ module Hold
       def type_to_repo_mapping
         @type_to_repo_mapping ||=
           begin
-            @type_to_repo_mapping.each_with_obeject({}) do |(t, m), hash|
-              hash[t] = @repos_for_model_classes[m]
+            @type_to_repo_mapping.each_with_obeject({}) do |(type, model), hash|
+              hash[type] = @repos_for_model_classes[model]
             end
           end
       end
@@ -70,7 +70,7 @@ module Hold
         ids_by_type.each_with_object({}) do |(type, type_ids), hash|
           repo = type_to_repo_mapping[type] || (fail NoRepoFound type)
           repo.get_many_by_ids(type_ids, options)
-            .each_with_index { |res, i| hash[type_ids[i]] = res }
+            .each_with_index { |res, index| hash[type_ids[index]] = res }
         end
           .values_at(*ids)
       end

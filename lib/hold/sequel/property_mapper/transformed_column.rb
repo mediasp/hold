@@ -44,7 +44,7 @@ module Hold
         end
 
         def make_multi_filter(values, _columns_mapped_to = nil)
-          { column_qualified => values.map { |v| to_sequel(v) } }
+          { column_qualified => values.map { |value| to_sequel(value) } }
         end
       end
     end

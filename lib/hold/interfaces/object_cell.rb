@@ -34,7 +34,7 @@ module Hold
     alias_method :has_property?, :property?
 
     def get_properties(*properties)
-      properties.map { |p| get_property(p) }
+      properties.map { |property| get_property(property) }
     end
 
     # May return a Cell which allows get / set / potentially other operations

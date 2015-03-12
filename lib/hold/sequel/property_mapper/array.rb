@@ -26,7 +26,7 @@ module Hold
         end
 
         def load_values(_rows = nil, ids = nil, _properties = nil, &block)
-          results = Hash.new { |h, k| h[k] = [] }
+          results = Hash.new { |hash, key| hash[key] = [] }
           select_all.filter(@foreign_key => ids).each do |row|
             results[row[:id]] << row[:value]
           end
@@ -40,10 +40,10 @@ module Hold
         def post_insert(entity, _rows, last_insert_id = nil)
           array = entity[@property_name] || (return)
           insert_rows = []
-          array.each_with_index do |v, i|
+          array.each_with_index do |value, index|
             row = { @foreign_key => entity.id || last_insert_id,
-                    @value_column => v }
-            row[@order_column] = i if @order_column
+                    @value_column => value }
+            row[@order_column] = index if @order_column
             insert_rows << row
           end
           @dataset.multi_insert(insert_rows)
@@ -54,9 +54,9 @@ module Hold
           id = entity.id
           @dataset.filter(@foreign_key => id).delete
           insert_rows = []
-          array.each_with_index do |v, i|
-            row = { @foreign_key => id, @value_column => v }
-            row[@order_column] = i if @order_column
+          array.each_with_index do |value, index|
+            row = { @foreign_key => id, @value_column => value }
+            row[@order_column] = index if @order_column
             insert_rows << row
           end
           @dataset.multi_insert(insert_rows)

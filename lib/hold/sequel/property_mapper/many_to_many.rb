@@ -175,14 +175,15 @@ module Hold
         end
 
         def insert_join_table_rows(entity, id, values)
-          rows = values.each_with_object([]).with_index do |(v, a), i|
-            value_id = id_for_value(v)
-            a << { left_key => id, right_key => value_id }
-                 .tap { |row| row[order_column] = i if order_column }
-                 .tap { |row| row.merge!(filter) if filter }
-                 .tap do |row|
-                   add_denormalized_columns_to_join_table_row(entity, v, row)
-                 end
+          rows = values.each_with_object([]).with_index do |(value, arr), idx|
+            value_id = id_for_value(value)
+            arr << { left_key => id, right_key => value_id }
+                   .tap { |row| row[order_column] = idx if order_column }
+                   .tap { |row| row.merge!(filter) if filter }
+                   .tap do |row|
+                     add_denormalized_columns_to_join_table_row(entity, value,
+                                                                row)
+                   end
           end
           join_table_dataset.multi_insert(rows)
         end

@@ -146,12 +146,12 @@ module Hold
       # with their index
       def load_values(rows = nil, ids = nil, properties = nil)
         if rows
-          rows.each_with_index do |row, i|
-            yield load_value(row, ids && ids[i], properties), i
+          rows.each_with_index do |row, index|
+            yield load_value(row, ids && ids[index], properties), index
           end
         else
-          ids.each_with_index do |id, i|
-            yield load_value(nil, id, properties), i
+          ids.each_with_index do |id, index|
+            yield load_value(nil, id, properties), index
           end
         end
       end

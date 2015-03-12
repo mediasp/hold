@@ -301,9 +301,9 @@ end
         columns_by_property = { identity_property => id_cols }
 
         properties
-          .reject { |p| p == identity_property }
-          .each_with_object(columns_by_property) do |p, hash|
-            hash[p] = mapper(p).columns_for_select
+          .reject { |property| property == identity_property }
+          .each_with_object(columns_by_property) do |property, hash|
+            hash[p] = mapper(property).columns_for_select
           end
       end
 
@@ -322,9 +322,9 @@ end
 
       def tables_by_property(properties)
         tables = properties
-                 .reject { |p| p == identity_property }
-                 .each_with_object([]) do |p, arr|
-                   ts = mapper(p).tables_for_select
+                 .reject { |property| property == identity_property }
+                 .each_with_object([]) do |property, arr|
+                   ts = mapper(property).tables_for_select
                    arr.concat(ts)
                  end
 

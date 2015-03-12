@@ -46,8 +46,8 @@ module Hold
       def property_versions
         @property_versions ||=
           if @properties.is_a?(::Array)
-            @properties.each_with_object({}) do |(p, v), hash|
-              hash[p] = v
+            @properties.each_with_object({}) do |(key, value), hash|
+              hash[key] = value
             end
           else
             @properties
@@ -61,9 +61,9 @@ module Hold
         property_hashes = load_property_hashes_from_rows(rows, ids)
 
         index = -1
-        property_hashes.each_with_object([]) do |h, arr|
+        property_hashes.each_with_object([]) do |hash, arr|
           row = rows[index += 1]
-          entity = @repository.construct_entity(h, row)
+          entity = @repository.construct_entity(hash, row)
           arr <<
             (return_the_row_alongside_each_result ? [entity, row] : entity)
         end
@@ -82,14 +82,14 @@ module Hold
       end
 
       def load_property_hashes_from_rows(rows, ids)
-        property_hashes = ids.each_with_object([]) do |id, a|
-          a << { @repository.identity_property => id }
+        property_hashes = ids.each_with_object([]) do |id, arr|
+          arr << { @repository.identity_property => id }
         end
 
         property_versions.each do |prop_name, prop_version|
           @repository.mapper(prop_name)
-            .load_values(rows, ids, prop_version) do |value, i|
-            property_hashes[i][prop_name] = value
+            .load_values(rows, ids, prop_version) do |value, id|
+            property_hashes[id][prop_name] = value
           end
         end
 

@@ -44,7 +44,7 @@ module Hold
           @order_direction = options[:order_direction] || :asc
 
           @manual_cascade_delete =
-            (v = options[:manual_cascade_delete].nil?) ? true : v
+            (value = options[:manual_cascade_delete].nil?) ? true : value
 
           @denormalized_count_column = options[:denormalized_count_column]
         end
