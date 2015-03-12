@@ -376,15 +376,7 @@ end
       end
 
       def get_by_id(id, properties: nil)
-        if can_construct_from_id_alone?(properties)
-          return construct_entity_from_id(id)
-        end
-
-        query(properties) do |dataset, property_columns|
-          filter = identity_mapper
-                   .make_filter(id, property_columns[identity_property])
-          dataset.filter(filter)
-        end.single_result
+        get_many_by_ids([id], properties: properties).first
       end
 
       # multi-get via a single SELECT... WHERE id IN (1,2,3,4)
@@ -494,12 +486,19 @@ end
         [id, row]
       end
 
+      def call_observers(entity, method)
+        Array(@observers).each do |observer|
+          observer.send(method, self, entity)
+        end
+
+        property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
+      end
+
       # Remember to call super if you override this.
       # If you do any extra inserting in an overridden pre_insert, call super
       # beforehand
       def pre_insert(entity)
-        Array(@observers).each { |observer| observer.pre_insert(self, entity) }
-        property_mappers.each_value { |mapper| mapper.pre_insert(entity) }
+        call_observers(entity, :pre_insert)
       end
 
       # Remember to call super if you override this.
@@ -598,8 +597,7 @@ end
       # If you do any extra deleting in an overridden pre_delete, call super
       # beforehand
       def pre_delete(entity)
-        Array(@observers).each { |observer| observer.pre_delete(self, entity) }
-        property_mappers.each { |_, mapper| mapper.pre_delete(entity) }
+        call_observers(:pre_delete, entity)
       end
 
       # Remember to call super if you override this.
