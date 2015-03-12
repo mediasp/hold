@@ -203,10 +203,11 @@ module Hold
       # mini DSL for use in mapper_config block passed to constructor, which is
       # instance_evalled:
 
-      def map_property(property_name, mapper_class = PropertyMapper, *p, &b)
+      def map_property(property_name, mapper_class = PropertyMapper, *property,
+                       &block)
         fail unless mapper_class <= PropertyMapper
         property_mappers[property_name] =
-          mapper_class.new(self, property_name, *p, &b)
+          mapper_class.new(self, property_name, *property, &block)
       end
 
       # Some convenience mapper DSL methods for each of the mapper subclasses:
@@ -232,8 +233,8 @@ end
 
       # Some helpers
 
-      def translate_exceptions(&b)
-        Hold::Sequel.translate_exceptions(&b)
+      def translate_exceptions(&block)
+        Hold::Sequel.translate_exceptions(&block)
       end
 
       def insert_row_for_entity(entity, table, id = nil)
@@ -312,9 +313,9 @@ end
           .aliases_for_select(main_table)
 
         properties
-          .reject { |p| p == identity_property }
-          .each_with_object(id_aliases) do |p, arr|
-            arr.concat mapper(p).aliases_for_select
+          .reject { |property| property == identity_property }
+          .each_with_object(id_aliases) do |property, arr|
+            arr.concat mapper(property).aliases_for_select
           end
           .uniq
       end
@@ -335,22 +336,22 @@ end
         tables.uniq
       end
 
-      def transaction(*p, &b)
-        @db.transaction(*p, &b)
+      def transaction(*args, &block)
+        @db.transaction(*args, &block)
       end
 
       # This is the main mechanism to retrieve stuff from the repo via custom
       # queries.
 
-      def query(properties = nil, &b)
+      def query(properties = nil, &block)
         properties = default_properties if properties == true || properties.nil?
-        Query.new(self, properties, &b)
+        Query.new(self, properties, &block)
       end
 
       # Can take a block which may add extra conditions, joins, order etc onto
       # the relevant query.
-      def get_many_with_dataset(options = {}, &b)
-        query(options[:properties], &b).to_a(options[:lazy])
+      def get_many_with_dataset(options = {}, &block)
+        query(options[:properties], &block).to_a(options[:lazy])
       end
 
       def get_all(options = {})
@@ -359,8 +360,8 @@ end
 
       # like get_many_with_dataset but just gets a single row, or nil if not
       # found. adds limit(1) to the dataset for you.
-      def get_with_dataset(options = {}, &b)
-        query(options[:properties], &b).single_result
+      def get_with_dataset(options = {}, &block)
+        query(options[:properties], &block).single_result
       end
 
       def get_property(entity, property, options = {})
@@ -606,8 +607,8 @@ end
 
       # ArrayCells for top-level collections
 
-      def array_cell_for_dataset(&b)
-        QueryArrayCell.new(self, &b)
+      def array_cell_for_dataset(&block)
+        QueryArrayCell.new(self, &block)
       end
 
       def count_dataset

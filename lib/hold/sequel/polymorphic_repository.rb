@@ -50,8 +50,8 @@ module Hold
         @type_to_model_class_mapping[type].new(property_hash)
       end
 
-      def transaction(*p, &b)
-        @db.transaction(*p, &b)
+      def transaction(*args, &block)
+        @db.transaction(*args, &block)
       end
 
       # - Takes multiple result rows with type and id column

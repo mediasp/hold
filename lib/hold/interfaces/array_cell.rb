@@ -47,8 +47,8 @@ module Hold
         @array_cell = array_cell
       end
 
-      def _each(&b)
-        @array_cell.get.each(&b)
+      def _each(&block)
+        @array_cell.get.each(&block)
       end
 
       def slice_from_start_and_length(start, length)
