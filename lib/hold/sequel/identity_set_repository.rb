@@ -1,5 +1,3 @@
-require 'wirer'
-
 module Hold
   # Sequel namespace
   module Sequel
@@ -36,55 +34,6 @@ module Hold
                                     end
         end
 
-        include Wirer::Factory::Interface
-
-        def constructor_dependencies
-          { database: Wirer::Dependency.new_from_args(Sequel::Database) }
-        end
-
-        def new_from_dependencies(deps, *p)
-          new(deps[:database], *p)
-        end
-
-        def provides_class
-          self
-        end
-
-        def provides_features
-          [[:get_class, model_class]]
-        end
-
-        def dependencies
-          @dependencies ||= { observers: Wirer::Dependency.new(
-            module: Hold::Sequel::RepositoryObserver,
-            features: [[:observes_repo_for_class, model_class]],
-            multiple: true,
-            optional: true
-          ) }
-        end
-
-        def setter_dependencies
-          property_mapper_args
-            .each do |property_name, mapper_class, options, block|
-              mapper_class.setter_dependencies_for(options, &block)
-                .each do |dep_name, dep_args|
-                  mapper_dep_name = :"#{property_name}__#{dep_name}"
-                  dependencies[mapper_dep_name] =
-                    Wirer::Dependency.new_from_arg_or_args_list(dep_args)
-                end
-            end
-          dependencies
-        end
-
-        def inject_dependency(instance, dep_name, value)
-          if dep_name == :observers
-            value.each { |observer| instance.add_observer(observer) }
-          else
-            mapper_name, dep_name = dep_name.to_s.split('__', 2)
-            instance.mapper(mapper_name.to_sym).send("#{dep_name}=", value)
-          end
-        end
-
         attr_writer :model_class
         alias_method :set_model_class, :model_class=
 
@@ -94,7 +43,6 @@ module Hold
         end
 
         def map_property(property_name, mapper_class, options = {}, &block)
-          fail unless mapper_class <= PropertyMapper
           property_mapper_args << [property_name, mapper_class, options, block]
         end
 
@@ -242,15 +190,6 @@ end
           (fail "#{self.class}: no such property mapper #{name.inspect}")
       end
 
-      # if you want to avoid the need to manually pass in target_repo parameters
-      # for each property mapped by a foreign key mapper etc - this will have
-      # the mappers go find the dependency themselves.
-      def get_repo_dependencies_from(repo_set)
-        property_mappers.each_value do |mapper|
-          mapper.get_repo_dependencies_from(repo_set)
-        end
-      end
-
       def table_id_column(table)
         tables_id_columns[table]
       end
@@ -294,19 +233,15 @@ end
       end
 
       def insert_row_for_entity(entity, table, id = nil)
-        row = {}
-        property_mappers.each_value do |mapper|
-          mapper.build_insert_row(entity, table, row, id)
+        property_mappers.values.each_with_object({}) do |mapper, row|
+          row.merge! mapper.build_insert_row(entity, table, id)
         end
-        row
       end
 
       def update_row_for_entity(update_entity, table)
-        row = {}
-        property_mappers.each_value do |mapper|
-          mapper.build_update_row(update_entity, table, row)
+        property_mappers.values.each_with_object({}) do |mapper, row|
+          row.merge! mapper.build_update_row(update_entity, table)
         end
-        row
       end
 
       public

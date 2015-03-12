@@ -38,11 +38,6 @@ module Hold
       #     => false is specified hinting that ON CASCADE DELETE is set on the
       #     foreign key so we needn't bother)
       class ManyToMany < PropertyMapper
-        def self.setter_dependencies_for(model_class: nil)
-          features = [Array(model_class)].map { |klass| [:get_class, klass] }
-          { target_repo: [IdentitySetRepository, *features] }
-        end
-
         attr_accessor :target_repo
 
         def initialize(repo, property, options = {})

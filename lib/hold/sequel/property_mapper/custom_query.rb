@@ -15,11 +15,6 @@ module Hold
       #      .filter(:boz_id => id)
       #  end
       class CustomQuery < PropertyMapper
-        def self.setter_dependencies_for(model_class: nil)
-          features = [Array(model_class)].map { |klass| [:get_class, klass] }
-          { target_repo: [IdentitySetRepository, *features] }
-        end
-
         attr_reader :model_class
         attr_accessor :target_repo
 

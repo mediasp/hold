@@ -6,17 +6,27 @@ module Hold
 
       def initialize(allocates_ids = false)
         @by_id = {}
-        @id_seq = 0 if allocates_ids
+        @allocates_ids = allocates_ids
       end
 
-      def allocates_ids?
-        !@id_seq.nil?
+      def next_id
+        @id_seq ||= -1
+        @id_seq += 1
+      end
+
+      attr_reader :allocates_ids
+      alias_method :allocates_ids?, :allocates_ids
+
+      def assign_id(object)
+        if @allocates_ids
+          object.send(:id=, next_id)
+        else
+          fail MissingIdentity
+        end
       end
 
       def store(object)
-        id = object.id
-        object.send(:id=, id = @id_seq += 1) if @id_seq && !id
-        fail MissingIdentity unless id
+        id = object.id || assign_id(object)
         @by_id[id] = object
       end
 

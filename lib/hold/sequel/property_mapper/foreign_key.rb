@@ -4,11 +4,6 @@ module Hold
       # Maps to an associated object which is fetched by id from a target
       # repository using a foriegn key column
       class ForeignKey < PropertyMapper
-        def self.setter_dependencies_for(model_class:)
-          features = [Array(model_class)].map { |klass| [:get_class, klass] }
-          { target_repo: [Hold::IdentitySetRepository, *features] }
-        end
-
         attr_accessor :target_repo
 
         attr_reader :column_alias, :column_name, :table, :column_qualified,
@@ -67,9 +62,12 @@ module Hold
           ensure_value_has_id_where_present(update_entity[@property_name])
         end
 
-        def build_insert_row(entity, table, row, _id = nil)
-          (value = entity[@property_name]) &&
-            row[@column_name] = value && value.id if @table == table
+        def build_insert_row(entity, table, _id = nil)
+          if (value = entity[@property_name]) && @table == table
+            { @column_name => value.id }
+          else
+            {}
+          end
         end
         alias_method :build_update_row, :build_insert_row
 

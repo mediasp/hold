@@ -1,10 +1,8 @@
 module Hold
   module Sequel
-    # For returning ThinModels::LazyArray instances based off a Sequel dataset:
     class DatasetLazyArray < ThinModels::LazyArray::MemoizedLength
-      def initialize(dataset, count_dataset = nil, &block)
+      def initialize(dataset, &block)
         @dataset = dataset
-        @count_dataset = count_dataset || @dataset
         @block = block
       end
 
@@ -14,7 +12,7 @@ module Hold
       end
 
       def _length
-        Hold::Sequel.translate_exceptions { @count_dataset.count }
+        Hold::Sequel.translate_exceptions { @dataset.count }
       end
 
       def slice_from_start_and_length(offset, limit)

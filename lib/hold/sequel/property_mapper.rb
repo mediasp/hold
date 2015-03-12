@@ -6,10 +6,6 @@ module Hold
     # property of a model class, between the instances of that model class, and
     # the database
     class PropertyMapper
-      def self.setter_dependencies_for(_options = {})
-        {}
-      end
-
       attr_reader :repository, :property_name, :property
 
       # If you pass a block, it will be instance_evalled, allowing you to create
@@ -106,7 +102,8 @@ module Hold
       # effectively your pre-insert hook and you can safely do other things
       # inside it in the knowledge they'll be rolled back in the event of a
       # subsequent problem.
-      def build_insert_row(_entity, _table, _row, _id = nil)
+      def build_insert_row(_entity, _table, _id = nil)
+        {}
       end
 
       # gets this property off the update_entity, and sets associated keys on a
@@ -114,7 +111,8 @@ module Hold
       #
       # as with build_update_row, this is done inside the update transaction,
       # it's effectively your pre-update hook.
-      def build_update_row(_update_entity, _table, _row)
+      def build_update_row(_update_entity, _table)
+        {}
       end
 
       # used to make a sequel filter condition setting relevant columns equal to

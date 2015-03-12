@@ -28,11 +28,6 @@ module Hold
       # the count of associated objects on a column on the main table of the
       # parent object.
       class OneToMany < PropertyMapper
-        def self.setter_dependencies_for(model_class: nil)
-          features = [Array(model_class)].map { |klass| [:get_class, klass] }
-          { target_repo: [IdentitySetRepository, *features] }
-        end
-
         attr_accessor :target_repo
 
         attr_reader :writeable, :manual_cascade_delete, :order_property,
@@ -165,12 +160,12 @@ module Hold
           end
         end
 
-        def build_insert_row(entity, table, row, _id = nil)
+        def build_insert_row(entity, table, _id = nil)
           unless @denormalized_count_column && table == @repository.main_table
-            return
+            return {}
           end
           values = entity[@property_name]
-          row[@denormalized_count_column] = (values ? values.length : 0)
+          { @denormalized_count_column => (values ? values.length : 0) }
         end
 
         def post_insert(entity, _rows, _insert_id)
@@ -235,11 +230,14 @@ module Hold
 
         def build_update_row(entity, table, row, _id = nil)
           unless @denormalized_count_column && table == @repository.main_table
-            return
+            return {}
           end
 
-          (values = entity[@property_name]) &&
-            row[@denormalized_count_column] = values.length
+          if (values = entity[@property_name])
+            { @denormalized_count_column => values.length }
+          else
+            {}
+          end
         end
 
         def post_update(entity, update_entity, _rows, values_before)

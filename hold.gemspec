@@ -32,7 +32,6 @@ DESC
   s.add_development_dependency('pronto-reek')
 
   s.add_dependency('sequel', '~> 3')
-  s.add_dependency('wirer', '>= 0.4.0')
   s.add_dependency('thin_models', '~> 0.2.1')
 
   s.files = Dir.glob("{lib}/**/*") + ['README.md']

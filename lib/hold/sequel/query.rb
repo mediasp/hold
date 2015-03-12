@@ -25,9 +25,6 @@ module Hold
         @dataset = @repository.dataset_to_select_tables(*tables)
         @dataset = yield @dataset, property_columns if block_given?
 
-        id_cols = property_columns[@repository.identity_property]
-        @count_dataset = @dataset.select(*id_cols)
-
         @dataset = @dataset.select(*aliased_columns)
       end
 
@@ -100,7 +97,7 @@ module Hold
       end
 
       def results(lazy = false)
-        lazy_array = DatasetLazyArray.new(dataset, @count_dataset) do |rows|
+        lazy_array = DatasetLazyArray.new(dataset) do |rows|
           load_from_rows(rows)
         end
         lazy ? lazy_array : lazy_array.to_a

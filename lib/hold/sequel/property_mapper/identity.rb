@@ -22,14 +22,15 @@ module Hold
         end
 
         # the ID needs to go into insert rows for /all/ tables of the repo
-        def build_insert_row(entity, table, row, id = nil)
-          id ||= entity[@property_name] || (return)
+        def build_insert_row(entity, table, id = nil)
+          id ||= entity[@property_name] || (return {})
           id_column = @repository.table_id_column(table)
-          row[id_column] = id
+          { id_column => id }
         end
 
         # we don't update the ID - considered immutable
-        def build_update_row(_entity, _table, _row)
+        def build_update_row(_entity, _table)
+          {}
         end
 
         # After a successful insert, we assign the last_insert_id back onto the
