@@ -1,7 +1,7 @@
 module Hold
   # Sequel namespace
   module Sequel
-    def self.IdentitySetRepository(model_class, main_table = nil)
+    def self.identity_set_repository(model_class, main_table = nil)
       Class.new(IdentitySetRepository) do
         set_model_class model_class
 
