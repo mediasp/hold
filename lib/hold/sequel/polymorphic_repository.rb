@@ -39,7 +39,7 @@ module Hold
       def type_to_repo_mapping
         @type_to_repo_mapping ||=
           begin
-            @type_to_repo_mapping.each_with_obeject({}) do |(t, m), hash|
+            @type_to_model_class_mapping.each_with_object({}) do |(t, m), hash|
               hash[t] = @repos_for_model_classes[m]
             end
           end
