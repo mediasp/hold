@@ -17,8 +17,8 @@ module Hold
         @model_class_to_type_mapping = @type_to_model_class_mapping.invert
 
         @repos_for_model_classes = options[:repos] || {}
-        @dataset = @db[@table].select(Sequel.as(@type_column, :_type),
-                                      Sequel.as(@id_column, :_id))
+        @dataset = @db[@table].select(::Sequel.as(@type_column, :_type),
+                                      ::Sequel.as(@id_column, :_id))
       end
 
       def can_get_class?(model_class)
